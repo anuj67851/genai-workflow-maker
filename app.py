@@ -1,245 +1,209 @@
-# Filename: app.py
 import streamlit as st
 import os
-import json
-import logging
 import time
+import base64
+from dotenv import load_dotenv
+
+# Import all necessary components from your library
 from genai_workflows.core import WorkflowEngine
+from genai_workflows.workflow import Workflow, WorkflowStep
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="GenAI Workflow Engine UI",
+    page_title="GenAI Workflow Engine",
     page_icon="🤖",
     layout="wide"
 )
 
-# --- Logging Setup ---
-# Ensures logs are visible in the console where you run streamlit.
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# --- App State & Demo Initialization ---
+def initialize_state():
+    """Initializes session state and creates the demo workflow if it doesn't exist."""
+    load_dotenv()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        st.error("FATAL: OPENAI_API_KEY environment variable not set. Please create a .env file.")
+        st.stop()
 
-# --- Mock Tools (from your test.py for deterministic testing) ---
-MOCK_ASSET_DB = {
-    "j.doe": {"serial_number": "HW-1001", "name": "Laptop"},
-    "a.smith": {"serial_number": "HW-2088", "name": "Desktop"},
-}
-MOCK_WARRANTY_DB = {
-    "HW-1001": {"status": "Active", "expires": "2026-05-10"},
-    "HW-2088": {"status": "Expired", "expires": "2024-01-20"},
-}
-MOCK_SOFTWARE_OUTAGES = ["VPN Service", "Email Server"]
+    if "engine" not in st.session_state:
+        db_file = "ui_workflows.db"
+        st.session_state.engine = WorkflowEngine(openai_api_key=api_key, db_path=db_file)
+        st.toast("Workflow Engine Initialized!")
+        create_it_support_demo_if_not_exists(st.session_state.engine)
 
-def register_mock_tools(engine: WorkflowEngine):
-    """Registers a suite of deterministic tools for testing the IT support workflow."""
-    logger.info("Registering mock IT tools.")
+    # Initialize all necessary state variables to prevent errors
+    for key in ["run_messages", "builder_messages", "wf_builder_name", "wf_builder_desc"]:
+        if key not in st.session_state:
+            st.session_state[key] = [] if "messages" in key else ""
 
+    if "execution_id" not in st.session_state: st.session_state.execution_id = None
+    if "builder_parser" not in st.session_state: st.session_state.builder_parser = None
+
+
+def create_it_support_demo_if_not_exists(engine: WorkflowEngine):
+    # This function is unchanged and correct.
+    # For brevity, its content is omitted here, but it should be copied from the previous response.
+    workflows = engine.list_workflows()
+    if any(wf['name'] == "IT Support Agent" for wf in workflows): return
+    MOCK_ASSET_DB = {"j.doe": "Laptop-SN1001", "a.smith": "Desktop-SN2088"}
+    MOCK_WARRANTY_DB = {"Laptop-SN1001": "Active until 2026", "Desktop-SN2088": "Expired"}
+    MOCK_SOFTWARE_OUTAGES = ["VPN Service"]
     @engine.register_tool
     def triage_it_issue(problem_description: str):
-        """
-        Analyzes a user's problem description and categorizes it into 'Hardware', 'Software', or 'Access'.
-        :param problem_description: The user's description of their IT problem.
-        """
-        desc = problem_description.lower()
-        if any(keyword in desc for keyword in ["slow", "broken", "won't turn on", "cracked", "laptop", "mouse"]):
-            return {"category": "Hardware"}
-        if any(keyword in desc for keyword in ["can't log in", "password", "locked out", "access"]):
-            return {"category": "Access"}
-        if any(keyword in desc for keyword in ["software", "application", "vpn", "email", "not loading"]):
-            return {"category": "Software"}
-        return {"category": "Unknown"}
-
+        desc=problem_description.lower();[a,b,c]=["Hardware","Software","Access"];d=any
+        if d(kw in desc for kw in["slow","broken","cracked","laptop"]):return{"category":a}
+        if d(kw in desc for kw in["software","vpn","email","not loading"]):return{"category":b}
+        if d(kw in desc for kw in["password","locked out","access"]):return{"category":c}
+        return{"category":"Unknown"}
     @engine.register_tool
     def check_known_outages(software_name: str):
-        """
-        Checks if a specific software is on the official list of current system outages.
-        :param software_name: The name of the software to check (e.g., 'VPN Service').
-        """
-        if software_name in MOCK_SOFTWARE_OUTAGES:
-            return {"status": "outage", "details": f"We are experiencing a system-wide outage for {software_name}."}
-        return {"status": "operational"}
-
+        if software_name in MOCK_SOFTWARE_OUTAGES:return{"status":"outage","details":f"We have a system-wide outage for {software_name}."}
+        return{"status":"operational"}
     @engine.register_tool
     def check_device_warranty(username: str):
-        """
-        Looks up a user's assigned device and checks its warranty status.
-        :param username: The username of the employee (e.g., 'j.doe').
-        """
-        if username not in MOCK_ASSET_DB:
-            return {"status": "error", "reason": "User not found in asset database."}
-        serial = MOCK_ASSET_DB[username]["serial_number"]
-        warranty_info = MOCK_WARRANTY_DB.get(serial, {"status": "Not Found"})
-        return {"serial_number": serial, "warranty": warranty_info}
-
+        serial = MOCK_ASSET_DB.get(username, "Unknown Device");status = MOCK_WARRANTY_DB.get(serial, "No Warranty Info")
+        return{"serial_number":serial,"warranty_status":status}
     @engine.register_tool
-    def create_support_ticket(username: str, issue_summary: str, priority: str = "Medium"):
-        """
-        Creates a new support ticket in the system.
-        :param username: The username of the person reporting the issue.
-        :param issue_summary: A brief summary of the problem.
-        :param priority: The priority of the ticket ('High', 'Medium', 'Low').
-        """
-        ticket_id = f"IT-{int(time.time()) % 10000}"
-        return {"status": "success", "ticket_id": ticket_id, "summary": issue_summary}
+    def create_support_ticket(username: str, summary: str, priority: str="Medium"):
+        return{"status":"success","ticket_id":f"IT-{int(time.time()%10000)}","summary":summary}
+    wf=Workflow(name="IT Support Agent",description="Triages IT issues, checks systems, and creates tickets.")
+    s=WorkflowStep
+    wf.add_step(s(step_id="triage_issue",description="Triage user's problem.",action_type="agentic_tool_use",prompt_template="Triage the user's problem described in their query: {query}",on_success="is_software_check"))
+    wf.add_step(s(step_id="is_software_check",description="Check if category is 'Software'.",action_type="condition_check",prompt_template="The output of 'triage_issue' contains 'Software'",on_success="ask_for_software_name",on_failure="is_hardware_check"))
+    wf.add_step(s(step_id="is_hardware_check",description="Check if category is 'Hardware'.",action_type="condition_check",prompt_template="The output of 'triage_issue' contains 'Hardware'",on_success="check_warranty",on_failure="create_access_ticket"))
+    wf.add_step(s(step_id="ask_for_software_name",description="Ask for software name.",action_type="human_input",prompt_template="I see you have a software issue. Which application is causing problems (e.g., 'VPN Service')?",output_key="software_name",on_success="check_for_outage"))
+    wf.add_step(s(step_id="check_for_outage",description="Check for known outages.",action_type="agentic_tool_use",prompt_template="Check for outages for the software named: {input.software_name}",on_success="is_outage_check"))
+    wf.add_step(s(step_id="is_outage_check",description="Check if there was an outage.",action_type="condition_check",prompt_template="The output of 'check_for_outage' contains 'outage'",on_success="report_outage",on_failure="create_software_ticket"))
+    wf.add_step(s(step_id="report_outage",description="Inform user about the outage.",action_type="llm_response",prompt_template="Inform the user about the known outage based on the history. Do not create a ticket.",on_success="END"))
+    wf.add_step(s(step_id="create_software_ticket",description="Create medium priority software ticket.",action_type="agentic_tool_use",prompt_template="Create a support ticket for user {context.username} about the software issue: {input.software_name}",on_success="report_ticket_creation"))
+    wf.add_step(s(step_id="check_warranty",description="Check device warranty.",action_type="agentic_tool_use",prompt_template="Check the device warranty for user {context.username}",on_success="create_hardware_ticket"))
+    wf.add_step(s(step_id="create_hardware_ticket",description="Create high priority hardware ticket.",action_type="agentic_tool_use",prompt_template="Create a 'High' priority ticket for user {context.username} regarding their hardware issue. Mention warranty status from history.",on_success="report_ticket_creation"))
+    wf.add_step(s(step_id="create_access_ticket",description="Create ticket for access/unknown issues.",action_type="agentic_tool_use",prompt_template="Create a 'High' priority ticket for user {context.username} for the issue: {query}",on_success="report_ticket_creation"))
+    wf.add_step(s(step_id="report_ticket_creation",description="Confirm ticket creation.",action_type="llm_response",prompt_template="Politely inform the user that a ticket has been created and provide the ticket ID from the history.",on_success="END"))
+    engine.save_workflow(wf);st.toast("✅ Created Sophisticated 'IT Support Agent' Demo!")
 
 
-# --- Main Application Logic ---
-
-def main():
-    st.title("🤖 GenAI Workflow Engine Explorer")
-    st.markdown("An interactive UI to create, test, and manage autonomous workflows.")
-
-    # --- Sidebar for Configuration and Workflow Management ---
+def draw_sidebar():
+    """Draws the sidebar for building and managing workflows."""
     with st.sidebar:
-        st.header("⚙️ Configuration")
-        api_key = st.text_input("OpenAI API Key", type="password", help="Your key is not stored. It is only held in memory for the session.")
+        st.title("Workflow Controls")
 
-        # Initialize engine only if API key is provided
-        if api_key:
-            db_path = "streamlit_workflows.db"
-            # Use session state to keep the engine object alive across reruns
-            if 'engine' not in st.session_state or st.session_state.engine is None:
-                try:
-                    engine = WorkflowEngine(openai_api_key=api_key, db_path=db_path)
-                    register_mock_tools(engine)
-                    st.session_state.engine = engine
-                    st.success("Engine initialized.")
-                except Exception as e:
-                    st.error(f"Failed to initialize engine: {e}")
-                    st.session_state.engine = None
+        st.subheader("Build a Workflow")
+        with st.expander("Builder & Demo", expanded=False):
 
-            engine = st.session_state.engine
+            # --- FIX: Use a callback to set state BEFORE the UI is redrawn ---
+            def load_demo_defaults():
+                st.session_state.wf_builder_name = "IT Support Agent (Copy)"
+                st.session_state.wf_builder_desc = "Triages IT issues, checks systems, and creates tickets."
+
+            st.button("Load 'IT Support Agent' Demo", on_click=load_demo_defaults)
+
+            with st.form("new_workflow_form"):
+                st.text_input("Workflow Name", key="wf_builder_name")
+                st.text_area("Description", key="wf_builder_desc")
+                submitted = st.form_submit_button("Start Building")
+                if submitted:
+                    name = st.session_state.wf_builder_name
+                    desc = st.session_state.wf_builder_desc
+                    if name:
+                        parser = st.session_state.engine.create_workflow_interactively(name, desc)
+                        st.session_state.builder_parser = parser
+                        st.session_state.builder_messages = [{"role": "assistant", "content": f"Let's build '{name}'. What is the first step?"}]
+                        # Clear form values after submission
+                        st.session_state.wf_builder_name = ""
+                        st.session_state.wf_builder_desc = ""
+                        st.rerun()
+
+        st.subheader("Existing Workflows")
+        workflows = st.session_state.engine.list_workflows()
+        if not workflows: st.caption("No workflows created yet.")
         else:
-            st.session_state.engine = None
-            st.warning("Please enter your OpenAI API key to begin.")
+            for wf in workflows:
+                with st.container(border=True):
+                    st.write(f"**{wf['name']}**")
+                    st.caption(f"ID: {wf['id']}")
+                    if st.button("Delete", key=f"delete_{wf['id']}", type="secondary"):
+                        st.session_state.engine.delete_workflow(wf['id'])
+                        st.toast(f"Deleted workflow {wf['id']}")
+                        st.rerun()
 
-        # --- Workflow Management UI ---
-        if st.session_state.get('engine'):
-            st.divider()
-            st.header("📚 Workflows")
-            if st.button("Refresh List"):
-                st.rerun()
+def draw_main_content():
+    st.header("GenAI Workflow Engine")
+    run_tab, build_tab, visualize_tab = st.tabs(["▶️ Run Workflow", "🛠️ Build Workflow", "📊 Visualize & Details"])
 
-            try:
-                workflows = st.session_state.engine.list_workflows()
-                if not workflows:
-                    st.info("No workflows found. Create one in the 'Create Workflow' tab.")
+    with run_tab:
+        # This tab is correct and needs no changes
+        st.subheader("Automatic Workflow Execution")
+        if st.button("🔄 New Chat"):
+            st.session_state.run_messages, st.session_state.execution_id = [], None
+            st.rerun()
+        st.info("Enter a query below. The AI will automatically select and run the best workflow.", icon="💡")
+        for msg in st.session_state.run_messages:
+            with st.chat_message(msg["role"]): st.write(msg["content"])
+        if prompt := st.chat_input("What can I help you with today?"):
+            st.session_state.run_messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"): st.write(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("Processing..."):
+                    engine, exec_id = st.session_state.engine, st.session_state.execution_id
+                    if exec_id: result = engine.resume_execution(exec_id, prompt)
+                    else:
+                        context = {}; u = prompt.lower()
+                        if "j.doe" in u: context = {"username": "j.doe"}
+                        if "a.smith" in u: context = {"username": "a.smith"}
+                        result = engine.start_execution(query=prompt, context=context)
+                    status, response = result.get("status"), result.get("response", result.get("error", "..."))
+                    st.session_state.execution_id = result.get("execution_id")
+                    st.write(response)
+                    st.session_state.run_messages.append({"role": "assistant", "content": response})
+                    if status in ['completed', 'failed']: st.info("Workflow finished.", icon="🏁")
 
-                for wf in workflows:
-                    with st.expander(f"**{wf['name']}** (ID: {wf['id']})"):
-                        st.markdown(f"**Description:** {wf['description']}")
-                        st.markdown(f"**Owner:** {wf['owner']}")
+    with build_tab:
+        # This tab is correct and needs no changes
+        st.subheader("Interactive Workflow Builder")
+        if not st.session_state.builder_parser: st.info("Start building via the sidebar.")
+        else:
+            for msg in st.session_state.builder_messages:
+                with st.chat_message(msg["role"]):st.write(msg["content"])
+            if prompt := st.chat_input("Describe the next step..."):
+                st.session_state.builder_messages.append({"role":"user","content":prompt});
+                with st.chat_message("user"):st.write(prompt)
+                parser=st.session_state.builder_parser;
+                with st.spinner("Thinking..."):bot_response=parser.handle_user_response(prompt)
+                st.session_state.builder_messages.append({"role":"assistant","content":bot_response});
+                with st.chat_message("assistant"):st.write(bot_response)
+                if parser.is_finished:
+                    final_workflow=parser.get_final_workflow()
+                    if final_workflow:
+                        st.session_state.engine.save_workflow(final_workflow);st.success(f"Workflow '{final_workflow.name}' saved!");
+                        st.session_state.builder_parser=None;st.session_state.builder_messages=[]
 
-                        # Add a button to view the full workflow structure
-                        if st.button("View Full Definition", key=f"view_{wf['id']}"):
-                            full_wf = st.session_state.engine.get_workflow(wf['id'])
-                            st.json(full_wf.to_dict())
-
-                        # Add a delete button
-                        if st.button("Delete Workflow", key=f"delete_{wf['id']}", type="primary"):
-                            st.session_state.engine.delete_workflow(wf['id'])
-                            st.success(f"Deleted workflow '{wf['name']}'.")
-                            time.sleep(1) # Give a moment before rerunning
-                            st.rerun()
-
-            except Exception as e:
-                st.error(f"Could not load workflows: {e}")
-
-
-    # --- Main Panel for Interaction ---
-    if not st.session_state.get('engine'):
-        st.info("Enter your API key in the sidebar to activate the workflow engine.")
-        return
-
-    tab1, tab2 = st.tabs(["▶️ Execute Query", "➕ Create Workflow"])
-
-    # --- Create Workflow Tab ---
-    with tab1:
-        st.header("▶️ Execute a Query")
-        st.markdown(
-            "Type a query below. The engine will use its **Router** to find the most appropriate "
-            "workflow and then execute it."
-        )
-
-        query = st.text_area("User Query", height=100, placeholder="e.g., Hi, j.doe here. My laptop screen is cracked.")
-        context = st.text_area(
-            "Initial Context (JSON)",
-            height=100,
-            value='{"username": "j.doe"}',
-            help="Provide optional context as a JSON object that can be used by the workflow."
-        )
-
-        if st.button("Execute", type="primary", use_container_width=True):
-            if not query:
-                st.warning("Please enter a query.")
-            else:
-                with st.spinner("Executing workflow..."):
-                    try:
-                        parsed_context = json.loads(context) if context else {}
-                        result = st.session_state.engine.execute_query(query, parsed_context)
-
-                        st.subheader("✅ Final Response")
-                        st.markdown(result.get("response", "No response generated."))
-
-                        with st.expander("Show Full Execution Trace"):
-                            st.json(result)
-
-                    except json.JSONDecodeError:
-                        st.error("Invalid JSON in the 'Initial Context' field.")
-                    except Exception as e:
-                        st.error(f"An error occurred during execution: {e}")
-                        logger.error("Execution failed", exc_info=True)
-
-
-    # --- Execute Query Tab ---
-    with tab2:
-        st.header("➕ Create a New Workflow")
-        st.markdown(
-            "Define a workflow using natural language. The **Parser** will convert this into a "
-            "structured plan that the **Executor** can run."
-        )
-
-        # Pre-fill with the complex example for convenience
-        it_support_workflow_def = """
-Your goal is to act as a helpful IT support agent. Follow these steps precisely.
-
-1.  First, **use the triage tool** on the user's problem description to categorize it as 'Hardware', 'Software', or 'Access'. The user's problem is in the `{query}`.
-2.  **IF the category from the last step is 'Software'**:
-    a. First, **use the outage checking tool** to see if the software is down.
-    b. If there IS an outage, use an `llm_response` to inform the user about the outage details from the history. Stop.
-    c. If there is NO outage, **use the ticket creation tool** to create a 'Medium' priority ticket. Then, inform the user of the ticket number from the history.
-3.  **IF the category from the last step is 'Hardware'**:
-    a. First, **use the warranty checking tool** to get the device status for the user from the `{context}`.
-    b. Next, **use the ticket creation tool** to create a 'High' priority ticket summarizing the issue.
-    c. Finally, use an `llm_response` to inform the user of their device's serial number, warranty status, and the new ticket number, all from the `{history}`.
-4.  **IF the category from the last step is 'Access'**:
-    a. **Use the ticket creation tool** immediately to create a 'High' priority ticket.
-    b. Inform the user of the ticket number from the `{history}`.
-"""
-
-        with st.form("create_workflow_form"):
-            name = st.text_input("Workflow Name", "IT Support Ticket Agent")
-            description = st.text_input("Description", "Triages IT issues, checks systems, and creates support tickets.")
-            owner = st.text_input("Owner", "it.department")
-            definition = st.text_area("Natural Language Definition", it_support_workflow_def, height=400)
-
-            submitted = st.form_submit_button("Create Workflow", use_container_width=True)
-            if submitted:
-                if not all([name, description, definition]):
-                    st.warning("Please fill out all fields.")
-                else:
-                    with st.spinner("Parsing definition and creating workflow..."):
-                        try:
-                            workflow_id = st.session_state.engine.create_workflow(
-                                name=name,
-                                description=description,
-                                workflow_definition=definition,
-                                owner=owner
-                            )
-                            st.success(f"Successfully created workflow '{name}' with ID: {workflow_id}")
-                            st.info("Refresh the list in the sidebar to see the new workflow.")
-                        except Exception as e:
-                            st.error(f"Failed to create workflow: {e}")
-                            logger.error("Creation failed", exc_info=True)
+    with visualize_tab:
+        st.subheader("Workflow Diagram & Details")
+        workflows = st.session_state.engine.list_workflows()
+        if not workflows: st.info("No workflows to visualize. Go to the 'Build' tab to create one.")
+        else:
+            workflow_options = {f"{wf['name']} (ID: {wf['id']})": wf['id'] for wf in workflows}
+            selected_option = st.selectbox("Select a workflow to visualize:", options=workflow_options.keys())
+            if selected_option:
+                wf_id = workflow_options[selected_option]
+                workflow = st.session_state.engine.get_workflow(wf_id)
+                st.write(f"**Name:** {workflow.name}")
+                st.write(f"**Description:** {workflow.description}")
+                st.divider()
+                with st.spinner("Generating diagram..."):
+                    diagram = st.session_state.engine.visualize_workflow(wf_id)
+                    if diagram:
+                        # --- FIX: Use a robust, web-based image rendering method ---
+                        st.write("### Workflow Diagram")
+                        graph_bytes = diagram.encode("utf8")
+                        base64_bytes = base64.b64encode(graph_bytes)
+                        base64_string = base64_bytes.decode("ascii")
+                        img_url = f"https://mermaid.ink/img/{base64_string}"
+                        st.image(img_url, caption="Workflow Diagram rendered via mermaid.ink")
+                    else:
+                        st.error("Could not generate diagram for this workflow.")
 
 if __name__ == "__main__":
-    main()
+    initialize_state()
+    draw_sidebar()
+    draw_main_content()

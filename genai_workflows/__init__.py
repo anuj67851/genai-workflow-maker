@@ -2,18 +2,25 @@ from .core import WorkflowEngine
 from .workflow import Workflow, WorkflowStep
 from .tools import ToolRegistry
 from .storage import WorkflowStorage
-from .parser import WorkflowParser
 from .router import WorkflowRouter
 from .executor import WorkflowExecutor
 
-__version__ = "2.0.0"
+from .interactive_parser import InteractiveWorkflowParser
+from .visualization import WorkflowVisualizer
+
+__version__ = "3.0.0"
+
 __all__ = [
+    # Core Components
     "WorkflowEngine",
     "Workflow",
     "WorkflowStep",
-    "ToolRegistry",
+
+    # Major Sub-systems
+    "InteractiveWorkflowParser",
+    "WorkflowExecutor",
+    "WorkflowVisualizer",
     "WorkflowStorage",
-    "WorkflowParser",
+    "ToolRegistry",
     "WorkflowRouter",
-    "WorkflowExecutor"
 ]
