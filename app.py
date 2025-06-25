@@ -227,7 +227,7 @@ def render_run_workflow_page(engine: WorkflowEngine):
     st.header("🏃‍♂️ Run a Workflow")
     st.markdown("Enter a query to start a workflow. If it needs more information, it will ask you here.")
 
-    # NEW: UI to display created tickets from our mock DB
+    # UI to display created tickets from our mock DB
     with st.expander("🎫 View Created Tickets (Mock DB)", expanded=False):
         if not st.session_state.MOCK_TICKET_DB:
             st.info("No tickets have been created in this session yet.")
@@ -264,6 +264,9 @@ def render_run_workflow_page(engine: WorkflowEngine):
                     st.session_state.run_messages.append({"role": "assistant", "content": response_text})
                     st.session_state.current_execution_id = None
                     st.success("✅ Workflow Completed!", icon="🎉")
+                    # --- THIS IS THE FIX ---
+                    # Force the page to re-run from the top to refresh the ticket list.
+                    st.rerun()
 
                 elif result.get("status") == "awaiting_input":
                     response_text = result.get("response")
