@@ -1,0 +1,79 @@
+from typing import Dict, Callable, Any, Optional, List
+import inspect
+
+# Mapping Python types to JSON Schema types
+TYPE_MAPPING = {
+    "str": "string",
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+    "list": "array",
+    "dict": "object",
+}
+
+class ToolRegistry:
+    """Registry for managing and describing workflow tools for LLM consumption."""
+
+    def __init__(self):
+        self._tools: Dict[str, Callable] = {}
+        self._tool_schemas: Dict[str, Dict[str, Any]] = {}
+
+    def register(self, func: Callable = None, name: str = None):
+        """Register a tool function. Can be used as a decorator."""
+        def decorator(f: Callable):
+            tool_name = name or f.__name__
+            self._tools[tool_name] = f
+            self._tool_schemas[tool_name] = self._generate_schema(f, tool_name)
+            return f
+
+        return decorator(func) if func else decorator
+
+    def get_tool(self, name: str) -> Optional[Callable]:
+        """Get a tool function by name."""
+        return self._tools.get(name)
+
+    def list_tools(self) -> List[Dict[str, Any]]:
+        """List all available tools with their OpenAI-compatible schemas."""
+        return list(self._tool_schemas.values())
+
+    def _generate_schema(self, func: Callable, name: str) -> Dict[str, Any]:
+        """Generate OpenAI-compatible JSON schema from a function signature."""
+        sig = inspect.signature(func)
+        docstring = inspect.getdoc(func) or "No description provided."
+
+        # Extract the core description from the docstring (first line)
+        description = docstring.split('\n')[0]
+
+        properties = {}
+        required = []
+
+        for param in sig.parameters.values():
+            if param.name in ("self", "cls"):
+                continue
+
+            param_type = "any"
+            if param.annotation is not inspect.Parameter.empty:
+                param_type = TYPE_MAPPING.get(param.annotation.__name__, "string")
+
+            properties[param.name] = {"type": param_type}
+
+            # Try to parse param descriptions from docstring
+            for line in docstring.split('\n'):
+                if line.strip().startswith(f":param {param.name}:"):
+                    properties[param.name]["description"] = line.split(f":param {param.name}:")[1].strip()
+
+            if param.default is inspect.Parameter.empty:
+                required.append(param.name)
+
+        return {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": description,
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required,
+                },
+            },
+        }
