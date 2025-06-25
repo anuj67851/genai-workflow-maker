@@ -120,9 +120,12 @@ class WorkflowStorage:
             return None
 
         workflow_data = dict(row)
-        return Workflow.from_dict(workflow_data)
 
-    # --- ENHANCEMENT: Methods for managing persistent execution states ---
+        # This ensures that what we pass to Workflow.from_dict is correctly typed.
+        workflow_data["triggers"] = json.loads(workflow_data["triggers"]) if workflow_data.get("triggers") else []
+        workflow_data["steps"] = json.loads(workflow_data["steps"]) if workflow_data.get("steps") else {}
+
+        return Workflow.from_dict(workflow_data)
 
     def save_execution_state(self, execution_id: str, workflow_id: int, status: str, state_dict: Dict[str, Any]):
         """Saves or updates the state of a running/paused workflow execution."""

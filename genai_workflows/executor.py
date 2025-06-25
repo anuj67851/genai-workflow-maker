@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Dict, Any
 from .workflow import Workflow, WorkflowStep
 from .tools import ToolRegistry
@@ -40,11 +41,8 @@ class WorkflowExecutor:
 
                 result = self._execute_step(step, execution_state)
 
-                # ENHANCEMENT: Check for the pause signal from a human_input step.
                 if result.get("status") == "awaiting_input":
                     self.logger.info(f"Workflow paused. Awaiting human input for step '{step.step_id}'.")
-                    # Return the current state and the prompt for the user.
-                    # The engine will save this state.
                     return {
                         "status": "paused",
                         "state": execution_state,
@@ -67,7 +65,6 @@ class WorkflowExecutor:
                         self.logger.error(error_msg)
                         return {"status": "failed", "error": error_msg, "state": execution_state}
 
-            # If the loop finishes, the workflow is complete.
             if not execution_state.get("final_response"):
                 self.logger.info("Workflow ended without an explicit final response. Generating summary.")
                 execution_state["final_response"] = self._generate_final_response(execution_state)
@@ -109,23 +106,38 @@ class WorkflowExecutor:
         }
 
     def _fill_prompt_template(self, template: str, state: Dict[str, Any]) -> str:
-        """Replaces placeholders in a prompt template with values from the execution state."""
+        """
+        Replaces placeholders in a prompt template with values from the execution state.
+        Handles {query}, {history}, {input.key}, and {context.key}.
+        """
         filled_template = template
-        filled_template = filled_template.replace("{query}", state.get("query", ""))
-        filled_template = filled_template.replace("{context}", json.dumps(state.get("initial_context", {})))
-        filled_template = filled_template.replace("{history}", json.dumps(state.get("step_history", []), indent=2, default=str))
 
-        # ENHANCEMENT: Allow referencing data collected from previous human input steps.
-        for key, value in state.get("collected_inputs", {}).items():
-            placeholder = f"{{input.{key}}}"
-            filled_template = filled_template.replace(placeholder, str(value))
+        def replace_placeholder(match):
+            full_match = match.group(0) # e.g., {context.username}
+            source = match.group(1)   # e.g., 'context'
+            key = match.group(2)      # e.g., 'username'
+
+            if source == 'context':
+                value = state.get("initial_context", {}).get(key, f"'{key}' not found in context")
+            elif source == 'input':
+                value = state.get("collected_inputs", {}).get(key, f"'{key}' not found in inputs")
+            else:
+                return full_match # Should not happen with this regex, but safe
+
+            return str(value)
+
+        # Replace {context.key} and {input.key} placeholders
+        filled_template = re.sub(r'\{(context|input)\.([a-zA-Z0-9_]+)}', replace_placeholder, filled_template)
+
+        # Replace general placeholders
+        filled_template = filled_template.replace("{query}", state.get("query", ""))
+        filled_template = filled_template.replace("{history}", json.dumps(state.get("step_history", []), indent=2, default=str))
 
         return filled_template
 
+
     def _execute_agentic_tool_use(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
-        # This method's logic remains the same, but it uses the enhanced _fill_prompt_template
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
-        # ... (rest of the method is unchanged from your original)
         messages = [
             {"role": "system", "content": "You are an assistant that must achieve a goal by using the correct tool. Analyze the user's query and the goal, then call the appropriate tool with the correct parameters."},
             {"role": "user", "content": filled_prompt}
@@ -152,7 +164,6 @@ class WorkflowExecutor:
             return {"step_id": step.step_id, "success": False, "error": str(e)}
 
     def _execute_condition_check(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
-        # This method's logic remains the same
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
         prompt = f"""
         Based on the execution history provided below, evaluate if the following condition is true or false.
@@ -161,7 +172,6 @@ class WorkflowExecutor:
         {json.dumps(state.get("step_history", []), indent=2, default=str)}
         Respond with only the word TRUE or FALSE.
         """
-        # ... (rest of the method is unchanged)
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.0, max_tokens=5
@@ -175,9 +185,7 @@ class WorkflowExecutor:
             return {"step_id": step.step_id, "success": False, "error": str(e)}
 
     def _execute_llm_response(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
-        # This method's logic remains the same
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
-        # ... (rest of the method is unchanged, using the more robust structured prompt from your original)
         structured_prompt = f"""
         You are an assistant generating a user-facing response based on the instruction: "{filled_prompt}".
         To do this, synthesize information from the execution history provided below.

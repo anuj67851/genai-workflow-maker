@@ -92,15 +92,35 @@ class WorkflowEngine:
         if not workflow:
             return {"status": "failed", "error": f"Associated workflow ID {paused_state['workflow_id']} could not be found."}
 
-        # Inject the user's input into the state
-        # The key for the input was stored in the last history entry when it paused
+        # *** THE CRITICAL FIX IS HERE ***
+
+        # 1. Find the step that was paused
+        paused_step_id = paused_state.get("current_step_id")
+        paused_step = workflow.get_step(paused_step_id)
+        if not paused_step:
+            error_msg = f"State is corrupt. Paused step ID '{paused_step_id}' not found in workflow."
+            self.logger.error(error_msg)
+            return {"status": "failed", "error": error_msg}
+
+        # 2. Inject the user's input into the state, as before
         last_history_entry = paused_state["step_history"][-1]
         output_key = last_history_entry.get("output_key")
         if output_key:
             paused_state["collected_inputs"][output_key] = user_input
-            self.logger.info(f"Resuming execution {execution_id}. Stored input under key '{output_key}'.")
+            self.logger.info(f"Resuming execution {execution_id}. Stored input '{user_input}' under key '{output_key}'.")
+            # Also add a simple history entry for the input itself for better traceability
+            paused_state["step_history"].append({
+                'step_id': paused_step_id, 'type': 'human_input_provided',
+                'input': user_input
+            })
         else:
             self.logger.warning(f"Resuming execution {execution_id}, but the paused step had no output_key.")
+
+        # 3. Manually advance the state to the next step BEFORE re-entering the loop.
+        # The 'human_input' step is considered successfully completed by the user providing input.
+        next_step_id = paused_step.on_success
+        paused_state["current_step_id"] = next_step_id
+        self.logger.info(f"Advancing state from '{paused_step_id}' to next step: '{next_step_id}'.")
 
         return self._run_execution_loop(workflow, paused_state)
 
