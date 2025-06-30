@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from genai_workflows.core import WorkflowEngine
+from backend.genai_workflows.core import WorkflowEngine
 
 # --- Setup ---
 # Load environment variables (for OPENAI_API_KEY)

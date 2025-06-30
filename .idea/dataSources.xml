@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="ui_workflows" uuid="3df6c257-5a2e-4fa9-aea5-25c5c260bcb1">
+    <data-source source="LOCAL" name="visual_workflows" uuid="901b91ca-84f7-4f72-b8ce-b13c3d0f83da">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:D:\Job-Folder\genai-workflows\ui_workflows.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:D:\Job-Folder\genai-workflows\backend\visual_workflows.db</jdbc-url>
       <jdbc-additional-properties>
         <property name="com.intellij.clouds.kubernetes.db.enabled" value="false" />
       </jdbc-additional-properties>

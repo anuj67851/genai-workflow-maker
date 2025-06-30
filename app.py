@@ -5,8 +5,8 @@ import time
 from dotenv import load_dotenv
 
 # Import the necessary components from your library
-from genai_workflows.core import WorkflowEngine
-from genai_workflows.workflow import Workflow, WorkflowStep
+from backend.genai_workflows.core import WorkflowEngine
+from backend.genai_workflows.workflow import Workflow, WorkflowStep
 
 # Import the mermaid component for visualization
 from streamlit_mermaid import st_mermaid
@@ -264,7 +264,6 @@ def render_run_workflow_page(engine: WorkflowEngine):
                     st.session_state.run_messages.append({"role": "assistant", "content": response_text})
                     st.session_state.current_execution_id = None
                     st.success("✅ Workflow Completed!", icon="🎉")
-                    # --- THIS IS THE FIX ---
                     # Force the page to re-run from the top to refresh the ticket list.
                     st.rerun()
 

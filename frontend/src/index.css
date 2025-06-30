@@ -1,0 +1,55 @@
+/* Import Tailwind's base styles, components, and utilities */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles for the entire application */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-gray-50 text-gray-800;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Base styles for React Flow to ensure it looks good out of the box */
+.react-flow .react-flow__handle {
+    @apply bg-gray-500;
+}
+
+.react-flow .react-flow__handle-connecting {
+    @apply bg-indigo-500;
+}
+
+.react-flow .react-flow__handle-valid {
+    @apply bg-green-500;
+}
+
+.react-flow .react-flow__edge {
+    @apply stroke-gray-400;
+}
+
+.react-flow .react-flow__edge-path {
+    stroke-width: 2;
+}
+
+
+/* Custom styles for node inspector panel */
+.inspector-panel {
+    box-shadow: -4px 0px 15px rgba(0,0,0,0.1);
+}
+
+.inspector-panel label {
+    @apply block text-sm font-medium text-gray-600 mb-1;
+}
+
+.inspector-panel input, .inspector-panel textarea, .inspector-panel select {
+    @apply w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500;
+}
