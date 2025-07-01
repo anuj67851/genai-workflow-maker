@@ -1,12 +1,9 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 
-// REFACTORED: This wrapper is now smarter. It receives the entire `data`
-// object from the node and derives the action_type from it. This is a more
-// robust pattern than passing the type as a separate prop.
-
 const NodeWrapper = ({ data, children, selected }) => {
     const action_type = data?.action_type || 'default';
+    const customLabel = data?.label;
 
     const typeStyles = {
         agentic_tool_use: { bg: 'bg-node-tool', border: 'border-node-tool', title: 'Tool / Agent' },
@@ -18,13 +15,14 @@ const NodeWrapper = ({ data, children, selected }) => {
 
     const styles = typeStyles[action_type] || typeStyles.default;
     const selectionClass = selected ? `shadow-lg ring-2 ring-indigo-500` : 'shadow-md';
+    const displayTitle = customLabel || styles.title;
 
     return (
         <div className={`w-64 rounded-lg border-2 ${styles.border} ${selectionClass}`}>
             <Handle type="target" position={Position.Top} className="!w-4 !h-4 !bg-gray-500" />
 
             <div className={`px-3 py-1 text-sm font-bold text-gray-700 rounded-t-md ${styles.bg}`}>
-                {styles.title}
+                {displayTitle}
             </div>
 
             <div className="p-3 bg-white text-sm text-gray-700">

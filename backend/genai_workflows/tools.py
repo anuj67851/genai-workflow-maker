@@ -32,9 +32,17 @@ class ToolRegistry:
         """Get a tool function by name."""
         return self._tools.get(name)
 
+    def get_schema(self, name: str) -> Optional[Dict[str, Any]]:
+        """Get the JSON schema for a single tool by name."""
+        return self._tool_schemas.get(name)
+
     def list_tools(self) -> List[Dict[str, Any]]:
         """List all available tools with their OpenAI-compatible schemas."""
         return list(self._tool_schemas.values())
+
+    def get_tools_by_names(self, names: List[str]) -> List[Dict[str, Any]]:
+        """Get a list of tool schemas for a given list of tool names."""
+        return [schema for name, schema in self._tool_schemas.items() if name in names]
 
     def _generate_schema(self, func: Callable, name: str) -> Dict[str, Any]:
         """Generate OpenAI-compatible JSON schema from a function signature."""

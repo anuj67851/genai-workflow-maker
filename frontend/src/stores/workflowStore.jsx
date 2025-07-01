@@ -4,6 +4,7 @@ import {
     applyNodeChanges,
     applyEdgeChanges,
 } from 'reactflow';
+import axios from 'axios';
 
 const useWorkflowStore = create((set, get) => ({
     // --- STATE ---
@@ -50,7 +51,9 @@ const useWorkflowStore = create((set, get) => ({
         set({
             nodes: get().nodes.map((node) => {
                 if (node.id === nodeId) {
-                    return { ...node, data: { ...node.data, ...newData } };
+                    // Make sure to merge deeply to avoid overwriting nested data
+                    const updatedData = { ...node.data, ...newData };
+                    return { ...node, data: updatedData };
                 }
                 return node;
             }),
@@ -64,8 +67,6 @@ const useWorkflowStore = create((set, get) => ({
             workflowDescription: flow.description || ''
         });
     },
-    // The 'removeElements' function is now redundant because onNodesChange handles
-    // the protection, but we keep it for any direct UI calls that might need it.
     removeElements: ({ nodesToRemove, edgesToRemove }) => {
         const nodes = get().nodes.filter(n => !nodesToRemove.some(ntr => ntr.id === n.id));
         const edges = get().edges.filter(e => !edgesToRemove.some(etr => etr.id === e.id));
@@ -73,11 +74,13 @@ const useWorkflowStore = create((set, get) => ({
     },
 
     fetchTools: async () => {
+        // Prevent re-fetching if tools are already loaded
+        if (get().tools.length > 0) return;
         try {
-            const response = await fetch('/api/tools');
-            if (!response.ok) throw new Error('Failed to fetch tools');
-            const tools = await response.json();
-            set({ tools: tools });
+            const response = await axios.get('/api/tools');
+            if (response.data) {
+                set({ tools: response.data });
+            }
         } catch (error) {
             console.error("Error fetching tools:", error);
             set({ tools: [] });

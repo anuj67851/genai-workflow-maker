@@ -7,7 +7,7 @@ const HumanInputNode = ({ data, selected }) => {
         <NodeWrapper data={data} selected={selected}>
             <div className="flex flex-col gap-2">
                 <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">PROMPT</label>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">PROMPT FOR USER</label>
                     <p className="text-gray-800 p-2 bg-gray-50 rounded-md break-words">
                         {data.prompt_template || 'Please provide input...'}
                     </p>

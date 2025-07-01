@@ -56,10 +56,8 @@ class WorkflowEngine:
 
     def start_execution(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Finds the best workflow for a query and starts a new execution.
-        The workflow may complete in one go or pause if it requires human input.
+        Finds the best workflow for a query via the router and starts a new execution.
         """
-        context = context or {}
         all_workflows = self.storage.get_all_workflows()
         matching_workflow = self.router.find_matching_workflow(query, all_workflows)
 
@@ -67,20 +65,40 @@ class WorkflowEngine:
             self.logger.warning(f"No matching workflow found for query: '{query}'.")
             return { "status": "failed", "error": "No matching workflow found." }
 
+        return self._init_and_run(matching_workflow, query, context)
+
+    def start_execution_by_id(self, workflow_id: int, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Starts a new execution for a specific workflow ID, bypassing the router.
+        """
+        workflow = self.storage.get_workflow(workflow_id)
+        if not workflow:
+            self.logger.error(f"Execution start failed: Workflow with ID {workflow_id} not found.")
+            return { "status": "failed", "error": f"Workflow with ID {workflow_id} not found."}
+
+        return self._init_and_run(workflow, query, context)
+
+    def _init_and_run(self, workflow: Workflow, query: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Private helper to initialize state and start the execution loop for a given workflow.
+        """
+        context = context or {}
         # Create the initial state for a brand new execution
         execution_id = str(uuid.uuid4())
         initial_state = {
             "execution_id": execution_id,
-            "workflow_id": matching_workflow.id,
+            "workflow_id": workflow.id,
             "query": query,
             "initial_context": context,
             "collected_inputs": {},
             "step_history": [],
-            "current_step_id": matching_workflow.start_step_id,
+            "current_step_id": workflow.start_step_id,
             "final_response": None
         }
 
-        return self._run_execution_loop(matching_workflow, initial_state)
+        self.logger.info(f"Starting new execution {execution_id} for workflow '{workflow.name}' (ID: {workflow.id})")
+        return self._run_execution_loop(workflow, initial_state)
+
 
     def resume_execution(self, execution_id: str, user_input: Any) -> Dict[str, Any]:
         """Resumes a paused workflow with the provided human input."""
@@ -92,7 +110,6 @@ class WorkflowEngine:
         if not workflow:
             return {"status": "failed", "error": f"Associated workflow ID {paused_state['workflow_id']} could not be found."}
 
-        # 1. Find the step that was paused
         paused_step_id = paused_state.get("current_step_id")
         paused_step = workflow.get_step(paused_step_id)
         if not paused_step:
@@ -100,13 +117,11 @@ class WorkflowEngine:
             self.logger.error(error_msg)
             return {"status": "failed", "error": error_msg}
 
-        # 2. Inject the user's input into the state, as before
         last_history_entry = paused_state["step_history"][-1]
         output_key = last_history_entry.get("output_key")
         if output_key:
             paused_state["collected_inputs"][output_key] = user_input
             self.logger.info(f"Resuming execution {execution_id}. Stored input '{user_input}' under key '{output_key}'.")
-            # Also add a simple history entry for the input itself for better traceability
             paused_state["step_history"].append({
                 'step_id': paused_step_id, 'type': 'human_input_provided',
                 'input': user_input
@@ -114,8 +129,6 @@ class WorkflowEngine:
         else:
             self.logger.warning(f"Resuming execution {execution_id}, but the paused step had no output_key.")
 
-        # 3. Manually advance the state to the next step BEFORE re-entering the loop.
-        # The 'human_input' step is considered successfully completed by the user providing input.
         next_step_id = paused_step.on_success
         paused_state["current_step_id"] = next_step_id
         self.logger.info(f"Advancing state from '{paused_step_id}' to next step: '{next_step_id}'.")
@@ -133,9 +146,7 @@ class WorkflowEngine:
             execution_id = result["state"]["execution_id"]
 
             if status == "paused":
-                # Save the paused state to the DB for later resumption
                 paused_step = workflow.get_step(result['state']['current_step_id'])
-                # Add a record of the pause itself to the history
                 result['state']['step_history'].append({
                     'step_id': paused_step.step_id, 'type': 'human_input_pending',
                     'prompt': result['response'], 'output_key': result['output_key']
@@ -148,7 +159,6 @@ class WorkflowEngine:
                     "response": result["response"]
                 }
 
-            # If completed or failed, the execution is over. Remove the state from the DB.
             self.storage.delete_execution_state(execution_id)
             if status == "completed":
                 self.logger.info(f"Execution {execution_id} completed successfully.")
@@ -159,7 +169,6 @@ class WorkflowEngine:
 
         except Exception as e:
             self.logger.error(f"Critical error in execution loop for workflow '{workflow.name}': {e}", exc_info=True)
-            # Try to clean up any state if a critical error occurs
             if 'state' in locals() and 'execution_id' in state:
                 self.storage.delete_execution_state(state['execution_id'])
             return {"status": "failed", "error": f"A critical system error occurred: {e}"}

@@ -11,14 +11,15 @@ class WorkflowStep:
     on_success: str = 'END'
     on_failure: Optional[str] = None
     output_key: Optional[str] = None
+    label: Optional[str] = None
+    tool_selection: str = 'auto'  # 'auto', 'manual', 'none'
+    tool_names: Optional[List[str]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        # This is correct
-        return self.__dict__
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'WorkflowStep':
-        # This is correct
         # Use dictionary unpacking for simplicity, ensures all fields are mapped.
         return cls(**data)
 
@@ -37,17 +38,14 @@ class Workflow:
     updated_at: Optional[str] = None
 
     def add_step(self, step: WorkflowStep):
-        # This is correct
         if not self.steps:
             self.start_step_id = step.step_id
         self.steps[step.step_id] = step
 
     def get_step(self, step_id: str) -> Optional[WorkflowStep]:
-        # This is correct
         return self.steps.get(step_id)
 
     def to_dict(self) -> Dict[str, Any]:
-        # This is correct
         # Create a copy to avoid modifying the original object's __dict__
         d = self.__dict__.copy()
         # Ensure nested steps are also serialized to dictionaries

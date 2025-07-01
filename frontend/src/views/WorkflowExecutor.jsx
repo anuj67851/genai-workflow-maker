@@ -35,9 +35,16 @@ const WorkflowExecutor = () => {
         try {
             let result;
             if (executionId) {
+                // If an execution is in progress, we resume it. This is correct.
                 result = await axios.post('/api/executions/resume', { execution_id: executionId, user_input: userInput });
             } else {
-                result = await axios.post('/api/executions/start', { workflow_id: selectedWorkflow.id, query: userInput, context: { username: 'j.doe' } });
+                // If it's a new chat, we start the selected workflow by its ID.
+                // This is the critical fix.
+                result = await axios.post('/api/executions/start_by_id', {
+                    workflow_id: selectedWorkflow.id,
+                    query: userInput,
+                    context: { username: 'j.doe' }
+                });
             }
             const responseText = result.data.response || result.data.error || "An unknown error occurred.";
             setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
@@ -47,7 +54,7 @@ const WorkflowExecutor = () => {
                 setExecutionId(null);
             }
         } catch (error) {
-            const errorMsg = error.response?.data?.detail || error.message;
+            const errorMsg = error.response?.data?.detail || error.response?.data?.error || error.message;
             setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMsg}` }]);
             setExecutionId(null);
         } finally {
@@ -58,6 +65,7 @@ const WorkflowExecutor = () => {
     const handleSelectWorkflow = (workflow) => {
         setSelectedWorkflow(workflow);
         setMessages([{ role: 'assistant', content: `Selected workflow: "${workflow.name}". Please state your initial request.` }]);
+        setExecutionId(null);
     };
 
     const handleReset = () => {
@@ -80,6 +88,9 @@ const WorkflowExecutor = () => {
                 await axios.delete(`/api/workflows/${workflowId}`);
                 setWorkflows(prev => prev.filter(wf => wf.id !== workflowId));
                 alert("Workflow deleted successfully.");
+                if (selectedWorkflow?.id === workflowId) {
+                    handleReset();
+                }
             } catch (error) {
                 console.error("Failed to delete workflow:", error);
                 alert(`Error: ${error.response?.data?.detail || error.message}`);
@@ -87,6 +98,7 @@ const WorkflowExecutor = () => {
         }
     };
 
+    // The rest of the component (the JSX rendering) is unchanged as it was already correct.
     if (!selectedWorkflow) {
         return (
             <div className="p-8 max-w-4xl mx-auto">
@@ -97,7 +109,6 @@ const WorkflowExecutor = () => {
                         <div key={wf.id} onClick={() => handleSelectWorkflow(wf)} className="p-4 border rounded-lg hover:shadow-lg hover:border-indigo-500 cursor-pointer transition-all bg-white relative group">
                             <h2 className="font-bold text-indigo-700">{wf.name}</h2>
                             <p className="text-sm text-gray-600 mt-1">{wf.description}</p>
-                            {/* CORRECTED: The "opacity-0" class that made the buttons invisible has been removed. */}
                             <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={(e) => handleEditWorkflow(wf.id, e)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-indigo-100 hover:text-indigo-600">
                                     <PencilSquareIcon className="h-5 w-5"/>
@@ -114,7 +125,6 @@ const WorkflowExecutor = () => {
         );
     }
 
-    // The chat interface below is unchanged
     return (
         <div className="h-full flex flex-col max-w-3xl mx-auto bg-white border-x border-gray-200">
             <div className="p-4 border-b flex justify-between items-center">

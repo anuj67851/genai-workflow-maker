@@ -75,11 +75,19 @@ const BuilderComponent = () => {
         if (typeof type === 'undefined' || !type) return;
         const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
         const position = project({ x: event.clientX - reactFlowBounds.left, y: event.clientY - reactFlowBounds.top });
+
+        const nodeLabel = `New ${type.replace(/_/g, ' ')}`;
+
         const newNode = {
             id: `${type.replace(/_/g, '-')}-${+new Date()}`,
             type: `${type}Node`,
             position,
-            data: { action_type: type, description: `A new step to ${type.replace(/_/g, ' ')}.`, prompt_template: '' },
+            data: {
+                action_type: type,
+                label: nodeLabel,
+                description: `A new step to ${type.replace(/_/g, ' ')}.`,
+                prompt_template: ''
+            },
         };
         addNode(newNode);
     }, [project, addNode]);
