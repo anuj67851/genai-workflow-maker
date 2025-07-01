@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import useWorkflowStore from '../../stores/workflowStore';
-import { useReactFlow } from 'reactflow';
+import { TrashIcon } from '@heroicons/react/24/solid';
 
-// This is the panel that appears on the right side to edit the selected node's properties.
-const InspectorPanel = ({ selectedNode }) => {
-    // Get the state and actions from our Zustand store
-    const { tools, updateNodeData } = useWorkflowStore();
-
-    // Local state to manage the form inputs to avoid re-rendering the whole canvas on every keystroke
+const InspectorPanel = ({ selection }) => {
+    const { onNodesChange, onEdgesChange } = useWorkflowStore();
+    const { updateNodeData } = useWorkflowStore.getState();
     const [formData, setFormData] = useState({});
 
+    const selectedNode = selection?.nodes[0];
+
     useEffect(() => {
-        // When a new node is selected, update the form data to reflect that node's data
         if (selectedNode) {
             setFormData(selectedNode.data);
         }
@@ -23,15 +21,29 @@ const InspectorPanel = ({ selectedNode }) => {
     };
 
     const handleBlur = () => {
-        // When the user clicks away from an input, update the global state
-        // This is more performant than updating on every keystroke.
         if (selectedNode) {
             updateNodeData(selectedNode.id, formData);
         }
     };
 
-    // Render nothing if no node is selected
-    if (!selectedNode || ['startNode', 'endNode'].includes(selectedNode.type)) {
+    const handleDelete = () => {
+        if (!selection || (selection.nodes.length === 0 && selection.edges.length === 0)) return;
+
+        if (window.confirm(`Are you sure you want to delete the selected element(s)?`)) {
+            // Trigger the standard onNodesChange/onEdgesChange events with 'remove' actions.
+            // The store's handlers will now correctly process these.
+            if (selection.nodes.length > 0) {
+                onNodesChange(selection.nodes.map(n => ({ id: n.id, type: 'remove' })));
+            }
+            if (selection.edges.length > 0) {
+                onEdgesChange(selection.edges.map(e => ({ id: e.id, type: 'remove' })));
+            }
+        }
+    };
+
+    const isDeletable = selectedNode && !['startNode', 'endNode'].includes(selectedNode.type);
+
+    if (!selectedNode) {
         return (
             <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel">
                 <h3 className="text-xl font-bold text-gray-800">Properties</h3>
@@ -40,8 +52,7 @@ const InspectorPanel = ({ selectedNode }) => {
         );
     }
 
-    // --- Render different forms based on the selected node's type ---
-
+    // Fully defined render functions to avoid ambiguity
     const renderCommonFields = () => (
         <>
             <div>
@@ -89,14 +100,31 @@ const InspectorPanel = ({ selectedNode }) => {
     );
 
     return (
-        <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize">
-                Edit: {selectedNode.type.replace('Node', ' Node')}
-            </h3>
-            <div className="space-y-4">
-                {renderCommonFields()}
-                {selectedNode.type === 'human_inputNode' && renderHumanInputFields()}
-                {/* We can add specific fields for other node types here in the future */}
+        <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
+            <div className="flex-grow">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize">
+                    Edit: {selectedNode.type.replace('Node', ' Node')}
+                </h3>
+                <div className="space-y-4">
+                    {renderCommonFields()}
+                    {selectedNode.type === 'human_inputNode' && renderHumanInputFields()}
+                </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200">
+                <button
+                    onClick={handleDelete}
+                    disabled={!isDeletable}
+                    className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed transition-colors"
+                >
+                    <TrashIcon className="h-5 w-5"/>
+                    Delete Node
+                </button>
+                {!isDeletable && (
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                        The START and END nodes cannot be deleted.
+                    </p>
+                )}
             </div>
         </aside>
     );

@@ -5,57 +5,57 @@ import {
     applyEdgeChanges,
 } from 'reactflow';
 
-// Zustand is a small, fast and scaleable bearbones state-management solution.
-// It creates a "store" that can be accessed by any component.
-// This store will hold the state of our workflow builder canvas.
-
 const useWorkflowStore = create((set, get) => ({
     // --- STATE ---
     nodes: [],
     edges: [],
     workflowName: 'Untitled Workflow',
     workflowDescription: '',
-    tools: [], // To be populated from the API
+    tools: [],
 
     // --- ACTIONS ---
 
-    // Called by React Flow when nodes or edges are moved or selected
+    // We intercept changes here to prevent the deletion of protected nodes.
     onNodesChange: (changes) => {
+        const nonDeletableNodeIds = ['start', 'end'];
+
+        // Filter out any 'remove' change that targets a protected node
+        const filteredChanges = changes.filter(change => {
+            if (change.type === 'remove' && nonDeletableNodeIds.includes(change.id)) {
+                console.warn(`Attempted to delete protected node: ${change.id}. Ignoring.`);
+                return false; // Exclude this change
+            }
+            return true; // Keep all other changes
+        });
+
         set({
-            nodes: applyNodeChanges(changes, get().nodes),
+            nodes: applyNodeChanges(filteredChanges, get().nodes),
         });
     },
+
     onEdgesChange: (changes) => {
         set({
             edges: applyEdgeChanges(changes, get().edges),
         });
     },
-    // Called when a new connection is made between two nodes
     onConnect: (connection) => {
         set({
             edges: addEdge(connection, get().edges),
         });
     },
-
-    // Action to add a new node to the canvas (e.g., from the sidebar)
     addNode: (newNode) => {
         set({ nodes: [...get().nodes, newNode] });
     },
-
-    // Action to update the data of a specific node
     updateNodeData: (nodeId, newData) => {
         set({
             nodes: get().nodes.map((node) => {
                 if (node.id === nodeId) {
-                    // Merge the new data with existing data
                     return { ...node, data: { ...node.data, ...newData } };
                 }
                 return node;
             }),
         });
     },
-
-    // Action to set the entire state, used when loading a workflow
     setFlow: (flow) => {
         set({
             nodes: flow.nodes || [],
@@ -64,15 +64,18 @@ const useWorkflowStore = create((set, get) => ({
             workflowDescription: flow.description || ''
         });
     },
+    // The 'removeElements' function is now redundant because onNodesChange handles
+    // the protection, but we keep it for any direct UI calls that might need it.
+    removeElements: ({ nodesToRemove, edgesToRemove }) => {
+        const nodes = get().nodes.filter(n => !nodesToRemove.some(ntr => ntr.id === n.id));
+        const edges = get().edges.filter(e => !edgesToRemove.some(etr => etr.id === e.id));
+        set({ nodes, edges });
+    },
 
-    // Action to fetch available tools from the backend API
     fetchTools: async () => {
         try {
-            // The vite.config.js proxy will redirect this to http://localhost:8000/api/tools
             const response = await fetch('/api/tools');
-            if (!response.ok) {
-                throw new Error('Failed to fetch tools');
-            }
+            if (!response.ok) throw new Error('Failed to fetch tools');
             const tools = await response.json();
             set({ tools: tools });
         } catch (error) {
@@ -80,11 +83,8 @@ const useWorkflowStore = create((set, get) => ({
             set({ tools: [] });
         }
     },
-
-    // Action to set workflow metadata
     setWorkflowName: (name) => set({ workflowName: name }),
     setWorkflowDescription: (description) => set({ workflowDescription: description }),
-
 }));
 
 export default useWorkflowStore;

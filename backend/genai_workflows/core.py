@@ -92,8 +92,6 @@ class WorkflowEngine:
         if not workflow:
             return {"status": "failed", "error": f"Associated workflow ID {paused_state['workflow_id']} could not be found."}
 
-        # *** THE CRITICAL FIX IS HERE ***
-
         # 1. Find the step that was paused
         paused_step_id = paused_state.get("current_step_id")
         paused_step = workflow.get_step(paused_step_id)

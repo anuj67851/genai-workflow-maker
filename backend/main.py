@@ -55,9 +55,9 @@ class EngineSingleton:
 
             # Ensure a clean slate for the demo by removing the old DB file on startup
             db_file = "visual_workflows.db"
-            if os.path.exists(db_file):
-                os.remove(db_file)
-                logger.info(f"Removed existing database file: {db_file}")
+            # if os.path.exists(db_file):
+            #     os.remove(db_file)
+            #     logger.info(f"Removed existing database file: {db_file}")
 
             cls._instance = WorkflowEngine(openai_api_key=api_key, db_path=db_file)
             register_mock_tools(cls._instance) # Register tools on first init
