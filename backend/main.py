@@ -97,6 +97,14 @@ def register_mock_tools(engine: WorkflowEngine):
         """Creates a new support ticket."""
         ticket_id = f"IT-{int(time.time()) % 10000}"
         return {"status": "success", "ticket_id": ticket_id, "summary": problem_description}
+
+    @engine.register_tool
+    def write_data_onto_file(data: str):
+        """Writes data onto sample data file."""
+        with open("sample_data.txt", "a") as f:
+            f.write(f"{data}\n")
+        return {"status": "success"}
+
     logger.info("Mock IT tools registered.")
 
 # --- 2. Pydantic Models for API Data Validation ---
