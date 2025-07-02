@@ -9,6 +9,7 @@ TYPE_MAPPING = {
     "bool": "boolean",
     "list": "array",
     "dict": "object",
+    "Any": "any",
 }
 
 class ToolRegistry:
@@ -49,9 +50,7 @@ class ToolRegistry:
         sig = inspect.signature(func)
         docstring = inspect.getdoc(func) or "No description provided."
 
-        # Extract the core description from the docstring (first line)
         description = docstring.split('\n')[0]
-
         properties = {}
         required = []
 
@@ -59,19 +58,30 @@ class ToolRegistry:
             if param.name in ("self", "cls"):
                 continue
 
-            param_type = "any"
-            if param.annotation is not inspect.Parameter.empty:
-                param_type = TYPE_MAPPING.get(param.annotation.__name__, "string")
-
+            param_type_name = getattr(param.annotation, '__name__', 'string')
+            param_type = TYPE_MAPPING.get(param_type_name, "string")
             properties[param.name] = {"type": param_type}
 
-            # Try to parse param descriptions from docstring
             for line in docstring.split('\n'):
                 if line.strip().startswith(f":param {param.name}:"):
                     properties[param.name]["description"] = line.split(f":param {param.name}:")[1].strip()
 
             if param.default is inspect.Parameter.empty:
                 required.append(param.name)
+
+        # --- NEW: Parse return information ---
+        return_info = {"description": "No return description provided."}
+        if sig.return_annotation is not inspect.Signature.empty:
+            return_type_name = getattr(sig.return_annotation, '__name__', 'any')
+            return_info["type"] = TYPE_MAPPING.get(return_type_name, "any")
+
+        for line in docstring.split('\n'):
+            clean_line = line.strip()
+            if clean_line.startswith(":return:") or clean_line.startswith(":returns:"):
+                # Find the start of the description after the tag
+                desc_start = clean_line.find(":") + 1
+                return_info["description"] = clean_line[desc_start:].strip()
+                break # Stop after finding the first return description
 
         return {
             "type": "function",
@@ -83,5 +93,6 @@ class ToolRegistry:
                     "properties": properties,
                     "required": required,
                 },
+                "returns": return_info  # Add the parsed return info
             },
         }

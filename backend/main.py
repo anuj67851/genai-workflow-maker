@@ -65,12 +65,17 @@ app.add_middleware(
 )
 
 def register_mock_tools(engine: WorkflowEngine):
+    """Registers a set of deterministic tools for the IT support demo."""
     MOCK_ASSET_DB = {"j.doe": {"serial_number": "HW-1001"}, "a.smith": {"serial_number": "HW-2088"}}
     MOCK_WARRANTY_DB = {"HW-1001": {"status": "Active"}, "HW-2088": {"status": "Expired"}}
 
     @engine.register_tool
-    def triage_it_issue(problem_description: str):
-        """Analyzes a user's problem and categorizes it into 'Hardware', 'Software', or 'Access'."""
+    def triage_it_issue(problem_description: str) -> Dict[str, str]:
+        """
+        Analyzes a user's problem and categorizes it into 'Hardware', 'Software', or 'Access'.
+        :param problem_description: The full text of the user's issue.
+        :return: A dictionary with a 'category' key. e.g. {'category': 'Hardware'}
+        """
         desc = problem_description.lower()
         hardware_keywords = ["slow", "broken", "laptop", "screen", "won't turn on", "not working", "cracked", "keyboard", "mouse", "battery"]
         access_keywords = ["password", "access", "login", "can't log in", "locked out", "credentials"]
@@ -82,28 +87,56 @@ def register_mock_tools(engine: WorkflowEngine):
             return {"category": "Access"}
         if any(kw in desc for kw in software_keywords):
             return {"category": "Software"}
+
         return {"category": "Unknown"}
 
     @engine.register_tool
-    def check_device_warranty(username: str):
-        """Looks up a user's device and checks its warranty status."""
+    def check_device_warranty(username: str) -> Dict[str, Any]:
+        """
+        Looks up a user's device and checks its warranty status.
+        :param username: The username to look up (e.g., 'j.doe').
+        :return: A dictionary containing 'serial_number' and 'warranty' info. e.g. {'serial_number': 'HW-1001', 'warranty': {'status': 'Active'}}
+        """
         if username not in MOCK_ASSET_DB: return {"status": "error", "reason": "User not found."}
         serial = MOCK_ASSET_DB[username]["serial_number"]
         warranty_info = MOCK_WARRANTY_DB.get(serial, {"status": "Not Found"})
         return {"serial_number": serial, "warranty": warranty_info}
 
     @engine.register_tool
-    def create_support_ticket(username: str, problem_description: str):
-        """Creates a new support ticket."""
+    def create_support_ticket(username: str, problem_description: str) -> Dict[str, str]:
+        """
+        Creates a new support ticket.
+        :param username: The username of the person reporting the issue.
+        :param problem_description: A summary of the issue to include in the ticket.
+        :return: A dictionary with 'status', 'ticket_id', and 'summary'. e.g. {'status': 'success', 'ticket_id': 'IT-1234', 'summary': '...'}
+        """
         ticket_id = f"IT-{int(time.time()) % 10000}"
         return {"status": "success", "ticket_id": ticket_id, "summary": problem_description}
 
     @engine.register_tool
-    def write_data_onto_file(data: str):
-        """Writes data onto sample data file."""
-        with open("sample_data.txt", "a") as f:
-            f.write(f"{data}\n")
-        return {"status": "success"}
+    def write_data_onto_file(content: str) -> Dict[str, Any]:
+        """
+        Writes given content to a specified file.
+        :param content: The text content to write into the file.
+        :return: A dictionary with the operation 'status' and the 'file_path'. e.g. {'status': 'success', 'file_path': 'output/output.txt'}
+        """
+        filename = "sample_data.txt"
+        try:
+            # (It's good practice to place generated files in a subdirectory)
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+            file_path = os.path.join(output_dir, filename)
+
+            with open(file_path, "w") as f:
+                f.write(content)
+
+            logger.info(f"Successfully wrote to {file_path}")
+            return {"status": "success", "file_path": file_path}
+        except Exception as e:
+            logger.error(f"Failed to write to file {filename}: {e}", exc_info=True)
+            return {"status": "error", "reason": str(e)}
 
     logger.info("Mock IT tools registered.")
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import useWorkflowStore from '../../stores/workflowStore';
-import { TrashIcon } from '@heroicons/react/24/solid';
+import { TrashIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 
 const InspectorPanel = ({ selection }) => {
     const { onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools } = useWorkflowStore(state => ({
@@ -140,54 +140,67 @@ const InspectorPanel = ({ selection }) => {
         </div>
     );
 
-    const renderToolSelection = () => (
-        <div>
-            <label>Tool Usage</label>
-            <div className="space-y-3 rounded-md border border-gray-200 p-3 bg-white">
-                {/* --- BUG FIX STARTS HERE: Replaced flex with a rigid 2-column grid for alignment --- */}
-                {/* Option 1: Auto */}
-                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                    <input type="radio" id="tool_auto" name="tool_selection" value="auto" checked={formData.tool_selection === 'auto'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                    <label htmlFor="tool_auto" className="text-sm font-medium text-gray-700">Let agent decide from all available tools</label>
-                </div>
-                {/* Option 2: Manual */}
-                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                    <input type="radio" id="tool_manual" name="tool_selection" value="manual" checked={formData.tool_selection === 'manual'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                    <label htmlFor="tool_manual" className="text-sm font-medium text-gray-700">Select specific tools for the agent</label>
-                </div>
-                {/* Option 3: None */}
-                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                    <input type="radio" id="tool_none" name="tool_selection" value="none" checked={formData.tool_selection === 'none'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                    <label htmlFor="tool_none" className="text-sm font-medium text-gray-700">Do not use any tools (direct LLM response)</label>
-                </div>
-                {/* --- BUG FIX ENDS HERE --- */}
-            </div>
+    const renderToolSelection = () => {
+        const selectedToolSchemas = tools.filter(tool => formData.tool_names?.includes(tool.function.name));
 
-            {formData.tool_selection === 'manual' && (
-                <div className="mt-2 p-3 border border-gray-200 rounded-md bg-gray-50 max-h-48 overflow-y-auto space-y-2">
-                    <p className="text-xs text-gray-500 mb-2">Select one or more tools for the agent to use:</p>
-                    {/* --- BUG FIX STARTS HERE: Applied the same grid layout to the checkboxes --- */}
-                    {tools.map(tool => (
-                        <div key={tool.function.name} className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                            <input
-                                type="checkbox"
-                                id={`tool-chk-${tool.function.name}`}
-                                name={tool.function.name}
-                                checked={formData.tool_names?.includes(tool.function.name) || false}
-                                onChange={handleToolSelectionChange}
-                                onBlur={handleBlur}
-                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor={`tool-chk-${tool.function.name}`} className="text-sm text-gray-900 font-mono">
-                                {tool.function.name}
-                            </label>
-                        </div>
-                    ))}
-                    {/* --- BUG FIX ENDS HERE --- */}
+        return (
+            <div>
+                <label>Tool Usage</label>
+                <div className="space-y-3 rounded-md border border-gray-200 p-3 bg-white">
+                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
+                        <input type="radio" id="tool_auto" name="tool_selection" value="auto" checked={formData.tool_selection === 'auto'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                        <label htmlFor="tool_auto" className="text-sm font-medium text-gray-700">Let agent decide from all available tools</label>
+                    </div>
+                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
+                        <input type="radio" id="tool_manual" name="tool_selection" value="manual" checked={formData.tool_selection === 'manual'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                        <label htmlFor="tool_manual" className="text-sm font-medium text-gray-700">Select specific tools for the agent</label>
+                    </div>
+                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
+                        <input type="radio" id="tool_none" name="tool_selection" value="none" checked={formData.tool_selection === 'none'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                        <label htmlFor="tool_none" className="text-sm font-medium text-gray-700">Do not use any tools (direct LLM response)</label>
+                    </div>
                 </div>
-            )}
-        </div>
-    );
+
+                {formData.tool_selection === 'manual' && (
+                    <div className="mt-2 p-3 border border-gray-200 rounded-md bg-gray-50 max-h-48 overflow-y-auto space-y-2">
+                        <p className="text-xs text-gray-500 mb-2">Select one or more tools for the agent to use:</p>
+                        {tools.map(tool => (
+                            <div key={tool.function.name} className="grid grid-cols-[auto_1fr] items-center gap-x-3">
+                                <input
+                                    type="checkbox"
+                                    id={`tool-chk-${tool.function.name}`}
+                                    name={tool.function.name}
+                                    checked={formData.tool_names?.includes(tool.function.name) || false}
+                                    onChange={handleToolSelectionChange}
+                                    onBlur={handleBlur}
+                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <label htmlFor={`tool-chk-${tool.function.name}`} className="text-sm text-gray-900 font-mono">
+                                    {tool.function.name}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* --- NEW: Display return information for selected tools --- */}
+                {formData.tool_selection === 'manual' && selectedToolSchemas.length > 0 && (
+                    <div className="mt-3 p-3 border border-blue-200 rounded-lg bg-blue-50 space-y-2">
+                        <div className="flex items-center gap-2 text-blue-800">
+                            <InformationCircleIcon className="h-5 w-5"/>
+                            <h4 className="text-sm font-bold">Tool Return Information</h4>
+                        </div>
+                        {selectedToolSchemas.map(tool => (
+                            <div key={`info-${tool.function.name}`} className="text-xs">
+                                <p className="font-bold font-mono text-blue-900">{tool.function.name}:</p>
+                                <p className="text-blue-700 pl-2">{tool.function.returns?.description || "No return description provided."}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const nodeType = selectedNode.type.replace('Node', '');
 
