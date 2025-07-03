@@ -2,8 +2,6 @@ import openai
 import logging
 import uuid
 from typing import Dict, List, Optional, Any
-from datetime import datetime
-import random
 
 from .workflow import Workflow
 from .storage import WorkflowStorage
@@ -12,6 +10,7 @@ from .router import WorkflowRouter
 from .executor import WorkflowExecutor
 from .visualization import WorkflowVisualizer
 from .interactive_parser import InteractiveWorkflowParser
+from .. import tools
 
 
 class WorkflowEngine:
@@ -26,16 +25,16 @@ class WorkflowEngine:
         self.storage = WorkflowStorage(db_path)
         self.tool_registry = ToolRegistry()
         self.router = WorkflowRouter(self.client)
-        self.executor = WorkflowExecutor(self.client, self.tool_registry)
+        # Pass storage and self (engine) to executor for sub-workflow calls
+        self.executor = WorkflowExecutor(self.client, self.tool_registry, self.storage, self)
         self.visualizer = WorkflowVisualizer()
         self.interactive_parser = InteractiveWorkflowParser(self.client, self.tool_registry)
 
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
-        self._register_builtin_tools()
-
-    # --- 1. Workflow Definition & Creation ---
+        tools.register_all_tools(self.tool_registry)
+        self.logger.info(f"Registered {len(self.tool_registry.list_tools())} tools.")
 
     def create_workflow_interactively(self, name: str, description: str, owner: str = "default") -> InteractiveWorkflowParser:
         """
@@ -51,8 +50,6 @@ class WorkflowEngine:
         workflow_id = self.storage.save_workflow(workflow)
         self.logger.info(f"Successfully saved workflow '{workflow.name}' with ID {workflow_id}")
         return workflow_id
-
-    # --- 2. Workflow Execution & State Management ---
 
     def start_execution(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -83,7 +80,6 @@ class WorkflowEngine:
         Private helper to initialize state and start the execution loop for a given workflow.
         """
         context = context or {}
-        # Create the initial state for a brand new execution
         execution_id = str(uuid.uuid4())
         initial_state = {
             "execution_id": execution_id,
@@ -99,9 +95,8 @@ class WorkflowEngine:
         self.logger.info(f"Starting new execution {execution_id} for workflow '{workflow.name}' (ID: {workflow.id})")
         return self._run_execution_loop(workflow, initial_state)
 
-
     def resume_execution(self, execution_id: str, user_input: Any) -> Dict[str, Any]:
-        """Resumes a paused workflow with the provided human input."""
+        """Resumes a paused workflow with the provided human input (text or file)."""
         paused_state = self.storage.get_execution_state(execution_id)
         if not paused_state:
             return {"status": "failed", "error": "Execution ID not found or has already completed."}
@@ -124,7 +119,7 @@ class WorkflowEngine:
             self.logger.info(f"Resuming execution {execution_id}. Stored input '{user_input}' under key '{output_key}'.")
             paused_state["step_history"].append({
                 'step_id': paused_step_id, 'type': 'human_input_provided',
-                'input': user_input
+                'input_summary': str(user_input) # Avoid logging large file content
             })
         else:
             self.logger.warning(f"Resuming execution {execution_id}, but the paused step had no output_key.")
@@ -137,6 +132,7 @@ class WorkflowEngine:
 
     def _run_execution_loop(self, workflow: Workflow, state: Dict[str, Any]) -> Dict[str, Any]:
         """
+
         Internal method that calls the executor and handles the result,
         managing state persistence in the database.
         """
@@ -147,17 +143,28 @@ class WorkflowEngine:
 
             if status == "paused":
                 paused_step = workflow.get_step(result['state']['current_step_id'])
+                # Record what kind of pause this is
+                pause_type = result.get("pause_type", "awaiting_input")
                 result['state']['step_history'].append({
-                    'step_id': paused_step.step_id, 'type': 'human_input_pending',
-                    'prompt': result['response'], 'output_key': result['output_key']
+                    'step_id': paused_step.step_id,
+                    'type': f'pause_{pause_type}',
+                    'prompt': result['response'],
+                    'output_key': result['output_key']
                 })
                 self.storage.save_execution_state(execution_id, workflow.id, "paused", result["state"])
-                self.logger.info(f"Execution {execution_id} paused and state saved to DB.")
-                return {
-                    "status": "awaiting_input",
+                self.logger.info(f"Execution {execution_id} paused for {pause_type} and state saved to DB.")
+
+                # Construct response for the frontend
+                response_payload = {
+                    "status": "awaiting_input", # Generic status for client
                     "execution_id": execution_id,
-                    "response": result["response"]
+                    "response": result["response"],
+                    "pause_type": pause_type,
                 }
+                if pause_type == 'awaiting_file_upload':
+                    response_payload["allowed_file_types"] = result.get("allowed_file_types")
+                    response_payload["max_files"] = result.get("max_files")
+                return response_payload
 
             self.storage.delete_execution_state(execution_id)
             if status == "completed":
@@ -172,8 +179,6 @@ class WorkflowEngine:
             if 'state' in locals() and 'execution_id' in state:
                 self.storage.delete_execution_state(state['execution_id'])
             return {"status": "failed", "error": f"A critical system error occurred: {e}"}
-
-    # --- 3. Introspection and Management ---
 
     def visualize_workflow(self, workflow_id: int) -> Optional[str]:
         """Generates a Mermaid.js diagram for a specified workflow."""
@@ -195,29 +200,6 @@ class WorkflowEngine:
         """Deletes a workflow and all associated paused states from the database."""
         return self.storage.delete_workflow(workflow_id)
 
-    # --- 4. Tool and Utility Methods ---
-
     def register_tool(self, func: callable, name: str = None):
         """Registers a custom Python function as a tool the LLM can use."""
         self.tool_registry.register(func, name)
-
-    def _register_builtin_tools(self):
-        """Registers a set of simple, built-in tools for demonstration."""
-        @self.register_tool
-        def get_current_time():
-            """
-            Gets the current date and time.
-            """
-            return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        @self.register_tool
-        def simple_calendar_check(date: str):
-            """
-            Checks calendar availability for a specific date. A real implementation would connect to a calendar API.
-            :param date: The date to check in YYYY-MM-DD format.
-            """
-            is_available = random.choice([True, False])
-            if is_available:
-                return f"The calendar is open on {date}. Suggested times are 2:00 PM and 4:00 PM."
-            else:
-                return f"The calendar is fully booked on {date}."

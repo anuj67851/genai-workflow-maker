@@ -12,14 +12,20 @@ import axios from 'axios';
 
 import Sidebar from '../components/ui/Sidebar';
 import InspectorPanel from '../components/ui/InspectorPanel';
+
+// Import all node components
 import ToolNode from '../components/nodes/ToolNode';
 import ConditionNode from '../components/nodes/ConditionNode';
 import HumanInputNode from '../components/nodes/HumanInputNode';
 import LLMResponseNode from '../components/nodes/LLMResponseNode';
 import StartNode from '../components/nodes/StartNode';
 import EndNode from '../components/nodes/EndNode';
+import WorkflowNode from '../components/nodes/WorkflowNode';
+import IngestionNode from '../components/nodes/IngestionNode';
+
 import useWorkflowStore from '../stores/workflowStore';
 
+// Map action_type to the corresponding component
 const nodeTypes = {
     agentic_tool_useNode: ToolNode,
     condition_checkNode: ConditionNode,
@@ -27,6 +33,8 @@ const nodeTypes = {
     llm_responseNode: LLMResponseNode,
     startNode: StartNode,
     endNode: EndNode,
+    workflow_callNode: WorkflowNode,
+    file_ingestionNode: IngestionNode,
 };
 
 const initialNodes = [
@@ -50,10 +58,11 @@ const BuilderComponent = () => {
                 const response = await axios.get(`/api/workflows/${id}`);
                 const { name, description, nodes, edges } = response.data;
                 setFlow({ name, description, nodes, edges });
-                setTimeout(() => fitView({ padding: 0.2 }), 100);
+                setTimeout(() => fitView({ padding: 0.4, duration: 200 }), 100);
             } catch (error) {
                 console.error("Failed to load workflow:", error);
                 alert("Could not load the specified workflow. Starting a new one.");
+                setFlow({ nodes: initialNodes, edges: [], name: 'Untitled Workflow', description: '' });
                 navigate('/');
             }
         };
@@ -76,18 +85,30 @@ const BuilderComponent = () => {
         const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
         const position = project({ x: event.clientX - reactFlowBounds.left, y: event.clientY - reactFlowBounds.top });
 
-        const nodeLabel = `New ${type.replace(/_/g, ' ')}`;
+        // Default data for new nodes
+        const defaultData = {
+            action_type: type,
+            label: `New ${type.replace(/_/g, ' ')}`,
+            description: `A new step to ${type.replace(/_/g, ' ')}.`,
+            prompt_template: '',
+            output_key: `output_${Math.floor(Math.random() * 1000)}` // Pre-fill with a random key
+        };
+
+        // Custom initial data for specific node types
+        if(type === 'file_ingestion') {
+            defaultData.max_files = 1;
+            defaultData.allowed_file_types = [];
+        }
+        if(type === 'workflow_call') {
+            defaultData.prompt_template = null; // Not needed for workflow_call
+        }
+
 
         const newNode = {
             id: `${type.replace(/_/g, '-')}-${+new Date()}`,
             type: `${type}Node`,
             position,
-            data: {
-                action_type: type,
-                label: nodeLabel,
-                description: `A new step to ${type.replace(/_/g, ' ')}.`,
-                prompt_template: ''
-            },
+            data: defaultData,
         };
         addNode(newNode);
     }, [project, addNode]);

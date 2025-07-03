@@ -10,6 +10,7 @@ const useWorkflowStore = create((set, get) => ({
     // --- STATE ---
     nodes: [],
     edges: [],
+    workflowId: null, // Keep track of the current workflow's ID
     workflowName: 'Untitled Workflow',
     workflowDescription: '',
     tools: [],
@@ -51,7 +52,6 @@ const useWorkflowStore = create((set, get) => ({
         set({
             nodes: get().nodes.map((node) => {
                 if (node.id === nodeId) {
-                    // Make sure to merge deeply to avoid overwriting nested data
                     const updatedData = { ...node.data, ...newData };
                     return { ...node, data: updatedData };
                 }
@@ -61,20 +61,26 @@ const useWorkflowStore = create((set, get) => ({
     },
     setFlow: (flow) => {
         set({
+            workflowId: flow.id || null,
             nodes: flow.nodes || [],
             edges: flow.edges || [],
             workflowName: flow.name || 'Untitled Workflow',
             workflowDescription: flow.description || ''
         });
     },
-    removeElements: ({ nodesToRemove, edgesToRemove }) => {
-        const nodes = get().nodes.filter(n => !nodesToRemove.some(ntr => ntr.id === n.id));
-        const edges = get().edges.filter(e => !edgesToRemove.some(etr => etr.id === e.id));
-        set({ nodes, edges });
+
+    // This function gathers the current state into the format the backend API expects.
+    getFlowAsJson: () => {
+        const { nodes, edges, workflowName, workflowDescription } = get();
+        return {
+            name: workflowName,
+            description: workflowDescription,
+            nodes: nodes,
+            edges: edges,
+        };
     },
 
     fetchTools: async () => {
-        // Prevent re-fetching if tools are already loaded
         if (get().tools.length > 0) return;
         try {
             const response = await axios.get('/api/tools');
