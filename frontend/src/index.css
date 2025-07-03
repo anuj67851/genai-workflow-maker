@@ -19,6 +19,28 @@ code {
     monospace;
 }
 
+/* Custom component styles for our workflow nodes */
+@layer components {
+    /* Define background colors */
+    .bg-node-tool { @apply bg-blue-100; }
+    .bg-node-condition { @apply bg-amber-100; }
+    .bg-node-human { @apply bg-green-100; }
+    .bg-node-response { @apply bg-cyan-100; }
+    .bg-node-workflow { @apply bg-purple-100; }
+    .bg-node-file { @apply bg-orange-100; }
+    .bg-node-start { @apply bg-gray-100; }
+
+    /* Define border colors */
+    .border-node-tool { @apply border-blue-300; }
+    .border-node-condition { @apply border-amber-300; }
+    .border-node-human { @apply border-green-300; }
+    .border-node-response { @apply border-cyan-300; }
+    .border-node-workflow { @apply border-purple-300; }
+    .border-node-file { @apply border-orange-300; }
+    .border-node-start { @apply border-gray-300; }
+}
+
+
 /* Base styles for React Flow to ensure it looks good out of the box */
 .react-flow .react-flow__handle {
     @apply bg-gray-500;
