@@ -3,7 +3,7 @@ import useWorkflowStore from '../../stores/workflowStore';
 import { TrashIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 
-const InspectorPanel = ({ selection }) => {
+const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const { onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools } = useWorkflowStore(state => ({
         onNodesChange: state.onNodesChange,
         onEdgesChange: state.onEdgesChange,
@@ -181,7 +181,7 @@ const InspectorPanel = ({ selection }) => {
             <label htmlFor="target_workflow_id">Workflow to Execute</label>
             <select id="target_workflow_id" name="target_workflow_id" value={formData.target_workflow_id || ''} onChange={handleInputChange} onBlur={handleBlur} >
                 <option value="">-- Select a Workflow --</option>
-                {availableWorkflows.filter(wf => wf.id.toString() !== (workflowId || '').toString()).map(wf => (
+                {availableWorkflows.filter(wf => wf.id.toString() !== (currentWorkflowId || '').toString()).map(wf => (
                     <option key={wf.id} value={wf.id}>{wf.name}</option>
                 ))}
             </select>

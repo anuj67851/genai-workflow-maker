@@ -18,7 +18,12 @@ const WorkflowNode = ({ data, selected }) => {
         fetchWorkflows();
     }, []);
 
-    const targetWorkflow = workflows.find(wf => wf.id === data.target_workflow_id);
+    // --- THIS LOGIC IS UPDATED ---
+    // We now use parseInt() to ensure we are comparing numbers with numbers.
+    const targetWorkflow = data.target_workflow_id
+        ? workflows.find(wf => wf.id === parseInt(data.target_workflow_id, 10))
+        : null;
+
     const workflowName = targetWorkflow ? targetWorkflow.name : "None Selected";
 
     return (

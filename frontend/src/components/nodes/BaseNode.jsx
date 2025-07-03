@@ -37,7 +37,7 @@ const BaseNode = ({ data, selected, children }) => {
                 {children}
 
                 {/* Requirement 4: Common display for prompt_template */}
-                {data.prompt_template && (
+                {data.prompt_template && data.action_type !== 'condition_check' && (
                     <div className="mt-2 p-2 bg-gray-50 border-t border-gray-200">
                         <p className="text-xs text-gray-400 italic break-words">
                             "{truncate(data.prompt_template)}"
