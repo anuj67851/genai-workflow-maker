@@ -25,6 +25,7 @@ import IngestionNode from '../components/nodes/IngestionNode';
 import VectorDBIngestionNode from '../components/nodes/VectorDBIngestionNode';
 import VectorDBQueryNode from '../components/nodes/VectorDBQueryNode';
 import CrossEncoderRerankNode from '../components/nodes/CrossEncoderRerankNode';
+import FileStorageNode from '../components/nodes/FileStorageNode';
 
 
 import useWorkflowStore from '../stores/workflowStore';
@@ -39,6 +40,7 @@ const nodeTypes = {
     endNode: EndNode,
     workflow_callNode: WorkflowNode,
     file_ingestionNode: IngestionNode,
+    file_storageNode: FileStorageNode,
     vector_db_ingestionNode: VectorDBIngestionNode,
     vector_db_queryNode: VectorDBQueryNode,
     cross_encoder_rerankNode: CrossEncoderRerankNode,
@@ -105,6 +107,11 @@ const BuilderComponent = () => {
         if(type === 'file_ingestion') {
             defaultData.max_files = 1;
             defaultData.allowed_file_types = [];
+        }
+        if (type === 'file_storage') {
+            defaultData.max_files = 1;
+            defaultData.allowed_file_types = []; // e.g., ['.png', '.jpg', '.pdf']
+            defaultData.storage_path = 'general_attachments';
         }
         if(type === 'workflow_call') {
             defaultData.prompt_template = null; // Not needed for workflow_call

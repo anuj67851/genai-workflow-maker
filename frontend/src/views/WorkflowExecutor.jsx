@@ -17,6 +17,7 @@ const WorkflowExecutor = () => {
     const [filesToUpload, setFilesToUpload] = useState([]);
     const chatEndRef = useRef(null);
     const fileInputRef = useRef(null);
+    const textInputRef = useRef(null);
     const navigate = useNavigate();
 
     const fetchWorkflows = async () => {
@@ -30,6 +31,13 @@ const WorkflowExecutor = () => {
 
     useEffect(() => { fetchWorkflows(); }, []);
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+    useEffect(() => {
+        // Only focus if the bot is NOT loading and we are expecting text input
+        if (!isLoading && executionState.pauseType === 'text_input' && textInputRef.current) {
+            textInputRef.current.focus();
+        }
+    }, [isLoading, messages, executionState.pauseType]); // Re-run whenever these change
 
     // --- API Interaction Logic ---
     const processApiResponse = (data) => {
@@ -164,7 +172,7 @@ const WorkflowExecutor = () => {
 
         return (
             <form onSubmit={handleMessageSubmit} className="flex gap-2">
-                <input type="text" name="userInput" className="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder={executionState.id ? "Provide the requested information..." : "Type your initial request..."} disabled={isLoading} />
+                <input type="text" name="userInput" ref={textInputRef} className="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder={executionState.id ? "Provide the requested information..." : "Type your initial request..."} disabled={isLoading} />
                 <button type="submit" className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors" disabled={isLoading}>
                     <PaperAirplaneIcon className="h-5 w-5"/>
                 </button>

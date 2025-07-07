@@ -6,7 +6,7 @@ class WorkflowStep:
     """Represents a single, atomic step in a workflow."""
     step_id: str
     description: str
-    action_type: str # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'
+    action_type: str # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage'
     prompt_template: Optional[str] = None
     on_success: str = 'END'
     on_failure: Optional[str] = None
@@ -31,6 +31,9 @@ class WorkflowStep:
     chunk_overlap: Optional[int] = 200         # For ingestion
     top_k: Optional[int] = 5                   # For query
     rerank_top_n: Optional[int] = 3            # For rerank
+
+    # --- NEW: Field for 'file_storage' ---
+    storage_path: Optional[str] = None # e.g., 'tickets/attachments'
 
 
     def to_dict(self) -> Dict[str, Any]:

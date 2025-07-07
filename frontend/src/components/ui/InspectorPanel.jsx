@@ -48,6 +48,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 // File Ingestion fields
                 allowed_file_types: [],
                 max_files: 1,
+                storage_path: '',
                 // RAG Fields
                 collection_name: '',
                 embedding_model: '',
@@ -121,7 +122,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 <label htmlFor="description">Description</label>
                 <input id="description" name="description" value={formData.description || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="A brief summary of this step"/>
             </div>
-            {['agentic_tool_use', 'condition_check', 'human_input', 'llm_response', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && (
+            {['agentic_tool_use', 'condition_check', 'human_input', 'llm_response', 'file_ingestion', 'file_storage', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && (
                 <div>
                     <label htmlFor="prompt_template">Prompt / Instruction</label>
                     <textarea id="prompt_template" name="prompt_template" rows={5} value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="The detailed instruction for the LLM or user."/>
@@ -213,6 +214,25 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         </div>
     );
 
+    const renderFileStorageFields = () => (
+        <div className="space-y-4">
+            <div>
+                <label htmlFor="storage_path">Storage Subdirectory (Optional)</label>
+                <input id="storage_path" name="storage_path" value={formData.storage_path || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., ticket_attachments" />
+                <p className="text-xs text-gray-400 mt-1">A subdirectory within the main attachments folder to save this file to.</p>
+            </div>
+            <div>
+                <label htmlFor="max_files">Maximum Number of Files</label>
+                <input id="max_files" name="max_files" type="number" min="1" value={formData.max_files || 1} onChange={handleInputChange} onBlur={handleBlur} />
+            </div>
+            <div>
+                <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
+                <input id="allowed_file_types" name="allowed_file_types" value={(formData.allowed_file_types || []).join(', ')} onChange={handleArrayInputChange} onBlur={handleBlur} placeholder=".png, .jpg, .pdf" />
+                <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
+            </div>
+        </div>
+    );
+
     const renderVectorDbIngestionFields = () => (
         <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
             <h4 className="font-bold text-teal-800">Vector Ingestion Settings</h4>
@@ -273,12 +293,12 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                     {nodeType === 'agentic_tool_use' && renderToolSelection()}
                     {nodeType === 'workflow_call' && renderWorkflowCallFields()}
                     {nodeType === 'file_ingestion' && renderFileIngestionFields()}
-                    {/* --- NEW: Render RAG fields --- */}
+                    {nodeType === 'file_storage' && renderFileStorageFields()}
                     {nodeType === 'vector_db_ingestion' && renderVectorDbIngestionFields()}
                     {nodeType === 'vector_db_query' && renderVectorDbQueryFields()}
                     {nodeType === 'cross_encoder_rerank' && renderCrossEncoderRerankFields()}
 
-                    {['human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && renderOutputKeyField()}
+                    {['human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion', 'file_storage', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && renderOutputKeyField()}
                 </div>
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">

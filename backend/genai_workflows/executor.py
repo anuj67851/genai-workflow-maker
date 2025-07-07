@@ -17,6 +17,7 @@ from .actions.llm_response_executor import LlmResponseAction
 from .actions.vector_db_ingestion_executor import VectorDbIngestionAction
 from .actions.vector_db_query_executor import VectorDbQueryAction
 from .actions.workflow_call_executor import WorkflowCallAction
+from .actions.file_storage_executor import FileStorageAction
 
 
 if TYPE_CHECKING:
@@ -44,6 +45,7 @@ class WorkflowExecutor:
             "agentic_tool_use": AgenticToolUseAction,
             "condition_check": ConditionCheckAction,
             "cross_encoder_rerank": CrossEncoderRerankAction,
+            "file_storage": FileStorageAction,
             "file_ingestion": FileIngestionAction,
             "human_input": HumanInputAction,
             "llm_response": LlmResponseAction,

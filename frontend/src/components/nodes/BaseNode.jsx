@@ -8,6 +8,7 @@ const typeStyles = {
     llm_response: { bg: 'bg-node-response', border: 'border-node-response', title: 'LLM Response' },
     workflow_call: { bg: 'bg-node-workflow', border: 'border-node-workflow', title: 'Run Workflow' },
     file_ingestion: { bg: 'bg-node-file', border: 'border-node-file', title: 'File Ingestion' },
+    file_storage: { bg: 'bg-node-file', border: 'border-node-file', title: 'File Storage' },
     vector_db_ingestion: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Vector Ingestion' },
     vector_db_query: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Vector Query' },
     cross_encoder_rerank: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Re-Rank Results' },

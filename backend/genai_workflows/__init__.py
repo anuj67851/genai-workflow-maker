@@ -1,3 +1,15 @@
+import logging
+import sys
+
+# Configure logging as soon as the package is imported.
+# This ensures all modules get the same configuration.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout  # Explicitly log to standard output.
+)
+
+
 from .core import WorkflowEngine
 from .workflow import Workflow, WorkflowStep
 from .tools import ToolRegistry

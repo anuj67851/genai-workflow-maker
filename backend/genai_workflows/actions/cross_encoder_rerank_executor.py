@@ -20,35 +20,34 @@ class CrossEncoderRerankAction(BaseActionExecutor):
             return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (sentence-transformers) are not installed."}
 
         try:
-            # The input to this step is expected to be the output from the query step
             input_data_str = self._fill_prompt_template(step.prompt_template, state)
 
-            # The filled template might be a JSON string, so we parse it.
-            # It could also be a direct reference to a python object.
             if isinstance(input_data_str, str):
                 try:
                     input_data = json.loads(input_data_str)
                 except json.JSONDecodeError:
-                    # Fallback for if the input isn't a valid JSON string
-                    return {"step_id": step.step_id, "success": False, "error": f"Rerank step received invalid input. Expected JSON object but got: {input_data_str[:100]}..."}
+                    return {"step_id": step.step_id, "success": False, "error": f"Rerank step received invalid JSON input: {input_data_str[:100]}..."}
             elif isinstance(input_data_str, dict):
-                input_data = input_data_str # It was already a dict
+                input_data = input_data_str
             else:
-                return {"step_id": step.step_id, "success": False, "error": f"Rerank step received unexpected input type: {type(input_data_str)}"}
+                return {"step_id": step.step_id, "success": False, "error": f"Rerank step received unexpected input type: {type(input_data)}"}
 
+            if 'query' not in input_data or 'retrieved_docs' not in input_data:
+                return {"step_id": step.step_id, "success": False, "error": "Rerank step input missing 'query' or 'retrieved_docs' keys."}
 
             query = input_data.get("query")
             retrieved_docs = input_data.get("retrieved_docs")
 
-            if not query or not retrieved_docs:
-                return {"step_id": step.step_id, "success": False, "error": "Rerank step input missing 'query' or 'retrieved_docs'."}
+            # If there are no documents to rerank, just pass through the empty list.
+            if not retrieved_docs:
+                logger.warning("Rerank step received no documents to process. Returning empty list.")
+                return {"step_id": step.step_id, "success": True, "type": "cross_encoder_rerank", "output": []}
 
             model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
             sentence_pairs = [[query, doc] for doc in retrieved_docs]
 
             scores = model.predict(sentence_pairs)
 
-            # Combine docs with scores, sort, and return top N
             scored_docs = list(zip(scores, retrieved_docs))
             scored_docs.sort(key=lambda x: x[0], reverse=True)
 

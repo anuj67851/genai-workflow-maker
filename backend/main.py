@@ -131,20 +131,12 @@ def resume_endpoint(req: ResumeRequest, eng: WorkflowEngine = Depends(get_engine
     return result
 
 @app.post("/api/executions/resume_with_file", summary="Resume a paused workflow with file(s)")
-def resume_with_file_endpoint(execution_id: str = Form(...), files: List[UploadFile] = File(...), eng: WorkflowEngine = Depends(get_engine)):
-    file_refs = []
-    for file in files:
-        try:
-            safe_filename = os.path.basename(file.filename)
-            file_path = os.path.join(UPLOAD_DIRECTORY, f"{execution_id}_{safe_filename}")
-            with open(file_path, "wb") as buffer: shutil.copyfileobj(file.file, buffer)
-            file_refs.append({"filename": safe_filename, "path": file_path})
-        finally:
-            file.file.close()
-    user_input = file_refs[0] if len(file_refs) == 1 else file_refs
-    result = eng.resume_execution(execution_id, user_input)
-    if result.get("status") == "failed": raise HTTPException(status_code=400, detail=result.get("error", "Resume with file failed"))
-    return result
+async def resume_with_file_endpoint(
+        execution_id: str = Form(...),
+        files: List[UploadFile] = File(...),
+        eng: WorkflowEngine = Depends(get_engine)
+):
+    return await eng.resume_execution_with_files(execution_id, files)
 
 @app.get("/api/tools", summary="List all available tools")
 def list_tools_endpoint(eng: WorkflowEngine = Depends(get_engine)):

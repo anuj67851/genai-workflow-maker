@@ -9,7 +9,8 @@ import {
     DocumentArrowUpIcon,
     CircleStackIcon,
     MagnifyingGlassIcon,
-    ArrowsUpDownIcon
+    ArrowsUpDownIcon,
+    ArchiveBoxIcon
 } from '@heroicons/react/24/outline';
 import useWorkflowStore from '../../stores/workflowStore';
 
@@ -30,6 +31,7 @@ const Sidebar = () => {
         { type: 'llm_response', label: 'LLM Response', icon: <ChatBubbleLeftRightIcon className="h-6 w-6 text-cyan-700" /> },
         { type: 'workflow_call', label: 'Run Workflow', icon: <BeakerIcon className="h-6 w-6 text-purple-700" /> },
         { type: 'file_ingestion', label: 'File Ingestion', icon: <DocumentArrowUpIcon className="h-6 w-6 text-orange-700" /> },
+        { type: 'file_storage', label: 'File Storage', icon: <ArchiveBoxIcon className="h-6 w-6 text-orange-700" /> },
         { type: 'vector_db_ingestion', label: 'Vector Ingestion', icon: <CircleStackIcon className="h-6 w-6 text-teal-700" /> },
         { type: 'vector_db_query', label: 'Vector Query', icon: <MagnifyingGlassIcon className="h-6 w-6 text-teal-700" /> },
         { type: 'cross_encoder_rerank', label: 'Rerank Results', icon: <ArrowsUpDownIcon className="h-6 w-6 text-teal-700" /> },
@@ -64,7 +66,7 @@ const Sidebar = () => {
                     <textarea value={workflowDescription} onChange={(e) => setWorkflowDescription(e.target.value)} placeholder="Workflow Description..." rows={3} className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
                 </div>
             </div>
-            <div className="py-4 flex-grow">
+            <div className="py-4 flex-grow overflow-y-auto pr-2">
                 <h2 className="text-lg font-bold text-gray-800 mb-2">Nodes</h2>
                 <p className="text-xs text-gray-500 mb-3">Drag nodes to the canvas to build your workflow.</p>
                 <div className="space-y-2">
