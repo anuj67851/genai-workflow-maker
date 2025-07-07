@@ -22,6 +22,10 @@ import StartNode from '../components/nodes/StartNode';
 import EndNode from '../components/nodes/EndNode';
 import WorkflowNode from '../components/nodes/WorkflowNode';
 import IngestionNode from '../components/nodes/IngestionNode';
+import VectorDBIngestionNode from '../components/nodes/VectorDBIngestionNode';
+import VectorDBQueryNode from '../components/nodes/VectorDBQueryNode';
+import CrossEncoderRerankNode from '../components/nodes/CrossEncoderRerankNode';
+
 
 import useWorkflowStore from '../stores/workflowStore';
 
@@ -35,6 +39,9 @@ const nodeTypes = {
     endNode: EndNode,
     workflow_callNode: WorkflowNode,
     file_ingestionNode: IngestionNode,
+    vector_db_ingestionNode: VectorDBIngestionNode,
+    vector_db_queryNode: VectorDBQueryNode,
+    cross_encoder_rerankNode: CrossEncoderRerankNode,
 };
 
 const initialNodes = [
@@ -57,7 +64,7 @@ const BuilderComponent = () => {
             try {
                 const response = await axios.get(`/api/workflows/${id}`);
                 const { name, description, nodes, edges } = response.data;
-                setFlow({ name, description, nodes, edges });
+                setFlow({ id, name, description, nodes, edges }); // Pass ID to store
                 setTimeout(() => fitView({ padding: 0.4, duration: 200 }), 100);
             } catch (error) {
                 console.error("Failed to load workflow:", error);
@@ -101,6 +108,19 @@ const BuilderComponent = () => {
         }
         if(type === 'workflow_call') {
             defaultData.prompt_template = null; // Not needed for workflow_call
+        }
+        if(type === 'vector_db_ingestion') {
+            defaultData.collection_name = 'my_collection';
+            defaultData.chunk_size = 1000;
+            defaultData.chunk_overlap = 200;
+            defaultData.embedding_model = 'text-embedding-3-small';
+        }
+        if(type === 'vector_db_query') {
+            defaultData.collection_name = 'my_collection';
+            defaultData.top_k = 5;
+        }
+        if(type === 'cross_encoder_rerank') {
+            defaultData.rerank_top_n = 3;
         }
 
 

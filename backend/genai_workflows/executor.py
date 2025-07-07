@@ -1,7 +1,19 @@
 import json
 import logging
 import re
+import os
 from typing import Dict, Any, List, TYPE_CHECKING
+import numpy as np
+
+# RAG-specific imports
+try:
+    import faiss
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from sentence_transformers import CrossEncoder
+    FAISS_AVAILABLE = True
+except ImportError:
+    FAISS_AVAILABLE = False
+
 
 from .workflow import Workflow, WorkflowStep
 from .tools import ToolRegistry
@@ -23,6 +35,8 @@ class WorkflowExecutor:
         self.storage = storage
         self.engine = engine
         self.logger = logging.getLogger(__name__)
+        # Create a directory for vector stores if it doesn't exist
+        os.makedirs("vector_stores", exist_ok=True)
 
     def execute(self, workflow: Workflow, execution_state: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -101,6 +115,9 @@ class WorkflowExecutor:
             "human_input": self._execute_human_input,
             "workflow_call": self._execute_workflow_call,
             "file_ingestion": self._execute_file_ingestion,
+            "vector_db_ingestion": self._execute_vector_db_ingestion,
+            "vector_db_query": self._execute_vector_db_query,
+            "cross_encoder_rerank": self._execute_cross_encoder_rerank,
         }
 
         executor_func = action_map.get(step.action_type)
@@ -174,28 +191,42 @@ class WorkflowExecutor:
         """
         if not template:
             return ""
-        filled_template = template
 
+        # First, handle the direct replacement of special placeholders
+        filled_template = template.replace("{query}", str(state.get("query", "")))
+
+        # Handle history replacement, which can be large
+        if "{history}" in filled_template:
+            history_json = json.dumps(state.get("step_history", []), indent=2, default=str)
+            filled_template = filled_template.replace("{history}", history_json)
+
+        # Now, handle structured placeholders like {input.key} and {context.key}
         def replace_placeholder(match):
             full_match = match.group(0)
             source = match.group(1)
             key = match.group(2)
 
             if source == 'context':
-                value = state.get("initial_context", {}).get(key, f"'{key}' not found in context")
+                value = state.get("initial_context", {}).get(key)
             elif source == 'input':
-                value = state.get("collected_inputs", {}).get(key, f"'{key}' not found in inputs")
+                value = state.get("collected_inputs", {}).get(key)
             else:
-                return full_match
+                return full_match # Should not happen with the given regex
+
+            if value is None:
+                self.logger.warning(f"Placeholder '{full_match}' resolved to None. Replacing with empty string.")
+                return ""
+
+            # If the value is a dictionary or list, serialize it to a JSON string
+            if isinstance(value, (dict, list)):
+                return json.dumps(value, default=str)
 
             return str(value)
 
+        # This regex looks for {input.some_key} or {context.some_key}
         filled_template = re.sub(r'\{(context|input)\.([a-zA-Z0-9_]+)}', replace_placeholder, filled_template)
-        filled_template = filled_template.replace("{query}", state.get("query", ""))
-        filled_template = filled_template.replace("{history}", json.dumps(state.get("step_history", []), indent=2, default=str))
 
         return filled_template
-
 
     def _execute_agentic_tool_use(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
@@ -310,3 +341,141 @@ class WorkflowExecutor:
         except Exception as e:
             self.logger.error(f"Final response generation failed: {e}", exc_info=True)
             return f"The workflow finished, but an error occurred during final response generation: {e}"
+
+    def _execute_vector_db_ingestion(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Splits text, gets embeddings, and saves to a FAISS vector store."""
+        if not FAISS_AVAILABLE:
+            return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (faiss, langchain) are not installed."}
+
+        try:
+            collection_name = step.collection_name
+            if not collection_name:
+                return {"step_id": step.step_id, "success": False, "error": "Missing 'collection_name' for ingestion step."}
+
+            input_text = self._fill_prompt_template(step.prompt_template, state)
+            if not input_text:
+                return {"step_id": step.step_id, "success": False, "error": "Ingestion step received no input text."}
+
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=step.chunk_size, chunk_overlap=step.chunk_overlap)
+            documents = text_splitter.split_text(input_text)
+
+            self.logger.info(f"Splitting text into {len(documents)} chunks.")
+
+            embedding_model = step.embedding_model or "text-embedding-3-small"
+            response = self.client.embeddings.create(input=documents, model=embedding_model)
+            embeddings = [item.embedding for item in response.data]
+
+            dimension = len(embeddings[0])
+            index = faiss.IndexFlatL2(dimension)
+            index.add(np.array(embeddings, dtype=np.float32))
+
+            vector_store_dir = "vector_stores"
+            faiss.write_index(index, f"{vector_store_dir}/{collection_name}.faiss")
+
+            # Save the text documents separately, linked by index
+            with open(f"{vector_store_dir}/{collection_name}.json", 'w') as f:
+                json.dump(documents, f)
+
+            output_message = f"Successfully ingested {len(documents)} chunks into collection '{collection_name}'."
+            self.logger.info(output_message)
+            return {"step_id": step.step_id, "success": True, "type": "vector_db_ingestion", "output": output_message}
+
+        except Exception as e:
+            error_msg = f"Vector DB ingestion failed: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return {"step_id": step.step_id, "success": False, "error": error_msg}
+
+
+    def _execute_vector_db_query(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Queries a FAISS vector store to find similar documents."""
+        if not FAISS_AVAILABLE:
+            return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (faiss, langchain) are not installed."}
+
+        try:
+            collection_name = step.collection_name
+            if not collection_name:
+                return {"step_id": step.step_id, "success": False, "error": "Missing 'collection_name' for query step."}
+
+            vector_store_dir = "vector_stores"
+            faiss_path = f"{vector_store_dir}/{collection_name}.faiss"
+            docs_path = f"{vector_store_dir}/{collection_name}.json"
+
+            if not os.path.exists(faiss_path) or not os.path.exists(docs_path):
+                return {"step_id": step.step_id, "success": False, "error": f"Collection '{collection_name}' not found."}
+
+            query_text = self._fill_prompt_template(step.prompt_template, state)
+            if not query_text:
+                return {"step_id": step.step_id, "success": False, "error": "Query step received no query text."}
+
+            index = faiss.read_index(faiss_path)
+            with open(docs_path, 'r') as f:
+                documents = json.load(f)
+
+            embedding_model = step.embedding_model or "text-embedding-3-small"
+            query_embedding = self.client.embeddings.create(input=[query_text], model=embedding_model).data[0].embedding
+
+            top_k = step.top_k or 5
+            distances, indices = index.search(np.array([query_embedding], dtype=np.float32), top_k)
+
+            retrieved_docs = [documents[i] for i in indices[0]]
+
+            output = {"query": query_text, "retrieved_docs": retrieved_docs}
+            self.logger.info(f"Retrieved {len(retrieved_docs)} documents from '{collection_name}'.")
+
+            return {"step_id": step.step_id, "success": True, "type": "vector_db_query", "output": output}
+
+        except Exception as e:
+            error_msg = f"Vector DB query failed: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return {"step_id": step.step_id, "success": False, "error": error_msg}
+
+
+    def _execute_cross_encoder_rerank(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Re-ranks retrieved documents using a cross-encoder model for better relevance."""
+        if not FAISS_AVAILABLE:
+            return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (sentence-transformers) are not installed."}
+
+        try:
+            # The input to this step is expected to be the output from the query step
+            input_data_str = self._fill_prompt_template(step.prompt_template, state)
+
+            # The filled template might be a JSON string, so we parse it.
+            # It could also be a direct reference to a python object.
+            if isinstance(input_data_str, str):
+                try:
+                    input_data = json.loads(input_data_str)
+                except json.JSONDecodeError:
+                    # Fallback for if the input isn't a valid JSON string
+                    return {"step_id": step.step_id, "success": False, "error": f"Rerank step received invalid input. Expected JSON object but got: {input_data_str[:100]}..."}
+            elif isinstance(input_data_str, dict):
+                input_data = input_data_str # It was already a dict
+            else:
+                return {"step_id": step.step_id, "success": False, "error": f"Rerank step received unexpected input type: {type(input_data_str)}"}
+
+
+            query = input_data.get("query")
+            retrieved_docs = input_data.get("retrieved_docs")
+
+            if not query or not retrieved_docs:
+                return {"step_id": step.step_id, "success": False, "error": "Rerank step input missing 'query' or 'retrieved_docs'."}
+
+            model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+            sentence_pairs = [[query, doc] for doc in retrieved_docs]
+
+            scores = model.predict(sentence_pairs)
+
+            # Combine docs with scores, sort, and return top N
+            scored_docs = list(zip(scores, retrieved_docs))
+            scored_docs.sort(key=lambda x: x[0], reverse=True)
+
+            rerank_top_n = step.rerank_top_n or 3
+            reranked_docs = [doc for score, doc in scored_docs[:rerank_top_n]]
+
+            self.logger.info(f"Re-ranked {len(retrieved_docs)} documents down to {len(reranked_docs)}.")
+
+            return {"step_id": step.step_id, "success": True, "type": "cross_encoder_rerank", "output": reranked_docs}
+
+        except Exception as e:
+            error_msg = f"Cross-encoder re-ranking failed: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return {"step_id": step.step_id, "success": False, "error": error_msg}

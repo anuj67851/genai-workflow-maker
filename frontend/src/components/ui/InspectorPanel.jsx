@@ -35,15 +35,27 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     useEffect(() => {
         if (selectedNode) {
             setFormData({
+                // Common fields
                 label: '',
                 description: '',
                 prompt_template: '',
                 output_key: '',
+                // Tool fields
                 tool_selection: 'auto',
                 tool_names: [],
+                // Workflow Call fields
                 target_workflow_id: null,
+                // File Ingestion fields
                 allowed_file_types: [],
                 max_files: 1,
+                // RAG Fields
+                collection_name: '',
+                embedding_model: '',
+                chunk_size: 1000,
+                chunk_overlap: 200,
+                top_k: 5,
+                rerank_top_n: 3,
+                // Spread existing data over defaults
                 ...selectedNode.data,
             });
         }
@@ -98,8 +110,6 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         );
     }
 
-    // --- RENDER FUNCTIONS FOR NODE-SPECIFIC FIELDS ---
-
     const renderCommonFields = () => (
         <>
             <div>
@@ -111,7 +121,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 <label htmlFor="description">Description</label>
                 <input id="description" name="description" value={formData.description || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="A brief summary of this step"/>
             </div>
-            {['agentic_tool_use', 'condition_check', 'human_input', 'llm_response', 'file_ingestion'].includes(nodeType) && (
+            {['agentic_tool_use', 'condition_check', 'human_input', 'llm_response', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && (
                 <div>
                     <label htmlFor="prompt_template">Prompt / Instruction</label>
                     <textarea id="prompt_template" name="prompt_template" rows={5} value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="The detailed instruction for the LLM or user."/>
@@ -203,6 +213,55 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         </div>
     );
 
+    const renderVectorDbIngestionFields = () => (
+        <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+            <h4 className="font-bold text-teal-800">Vector Ingestion Settings</h4>
+            <div>
+                <label htmlFor="collection_name">Collection Name</label>
+                <input id="collection_name" name="collection_name" value={formData.collection_name || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., project_docs_v1"/>
+            </div>
+            <div>
+                <label htmlFor="embedding_model">Embedding Model</label>
+                <input id="embedding_model" name="embedding_model" value={formData.embedding_model || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="text-embedding-3-small"/>
+            </div>
+            <div>
+                <label htmlFor="chunk_size">Chunk Size</label>
+                <input id="chunk_size" name="chunk_size" type="number" min="1" value={formData.chunk_size || 1000} onChange={handleInputChange} onBlur={handleBlur} />
+            </div>
+            <div>
+                <label htmlFor="chunk_overlap">Chunk Overlap</label>
+                <input id="chunk_overlap" name="chunk_overlap" type="number" min="0" value={formData.chunk_overlap || 200} onChange={handleInputChange} onBlur={handleBlur} />
+            </div>
+        </div>
+    );
+
+    const renderVectorDbQueryFields = () => (
+        <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+            <h4 className="font-bold text-teal-800">Vector Query Settings</h4>
+            <div>
+                <label htmlFor="collection_name">Collection Name</label>
+                <input id="collection_name" name="collection_name" value={formData.collection_name || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., project_docs_v1"/>
+            </div>
+            <div>
+                <label htmlFor="top_k">Top-K</label>
+                <input id="top_k" name="top_k" type="number" min="1" value={formData.top_k || 5} onChange={handleInputChange} onBlur={handleBlur} />
+                <p className="text-xs text-gray-400 mt-1">The number of initial documents to retrieve.</p>
+            </div>
+        </div>
+    );
+
+    const renderCrossEncoderRerankFields = () => (
+        <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+            <h4 className="font-bold text-teal-800">Re-Ranker Settings</h4>
+            <div>
+                <label htmlFor="rerank_top_n">Return Top-N</label>
+                <input id="rerank_top_n" name="rerank_top_n" type="number" min="1" value={formData.rerank_top_n || 3} onChange={handleInputChange} onBlur={handleBlur} />
+                <p className="text-xs text-gray-400 mt-1">The final number of documents to return after re-ranking.</p>
+            </div>
+        </div>
+    );
+
+
     return (
         <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
             <div className="flex-grow overflow-y-auto pr-2">
@@ -214,7 +273,12 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                     {nodeType === 'agentic_tool_use' && renderToolSelection()}
                     {nodeType === 'workflow_call' && renderWorkflowCallFields()}
                     {nodeType === 'file_ingestion' && renderFileIngestionFields()}
-                    {['human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion'].includes(nodeType) && renderOutputKeyField()}
+                    {/* --- NEW: Render RAG fields --- */}
+                    {nodeType === 'vector_db_ingestion' && renderVectorDbIngestionFields()}
+                    {nodeType === 'vector_db_query' && renderVectorDbQueryFields()}
+                    {nodeType === 'cross_encoder_rerank' && renderCrossEncoderRerankFields()}
+
+                    {['human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && renderOutputKeyField()}
                 </div>
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">

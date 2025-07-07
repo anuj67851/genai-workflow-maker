@@ -6,7 +6,7 @@ class WorkflowStep:
     """Represents a single, atomic step in a workflow."""
     step_id: str
     description: str
-    action_type: str # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion'
+    action_type: str # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'
     prompt_template: Optional[str] = None
     on_success: str = 'END'
     on_failure: Optional[str] = None
@@ -23,6 +23,15 @@ class WorkflowStep:
     # --- NEW: Fields for 'file_ingestion' ---
     allowed_file_types: Optional[List[str]] = field(default_factory=list) # e.g., ['.pdf', '.txt']
     max_files: int = 1
+
+    # --- NEW: Fields for RAG nodes ---
+    collection_name: Optional[str] = None      # For ingestion and query
+    embedding_model: Optional[str] = None      # For ingestion
+    chunk_size: Optional[int] = 1000           # For ingestion
+    chunk_overlap: Optional[int] = 200         # For ingestion
+    top_k: Optional[int] = 5                   # For query
+    rerank_top_n: Optional[int] = 3            # For rerank
+
 
     def to_dict(self) -> Dict[str, Any]:
         # Exclude fields with default or None values for cleaner serialization, if desired.

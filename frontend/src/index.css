@@ -29,6 +29,8 @@ code {
     .bg-node-workflow { @apply bg-purple-100; }
     .bg-node-file { @apply bg-orange-100; }
     .bg-node-start { @apply bg-gray-100; }
+    .bg-node-vector { @apply bg-teal-100; }
+
 
     /* Define border colors */
     .border-node-tool { @apply border-blue-300; }
@@ -38,6 +40,7 @@ code {
     .border-node-workflow { @apply border-purple-300; }
     .border-node-file { @apply border-orange-300; }
     .border-node-start { @apply border-gray-300; }
+    .border-node-vector { @apply border-teal-300; }
 }
 
 
@@ -65,7 +68,7 @@ code {
 
 /* Custom styles for node inspector panel */
 .inspector-panel {
-    box-shadow: -4px 0px 15px rgba(0,0,0,0.1);
+    box-shadow: -4px 0 15px rgba(0,0,0,0.1);
 }
 
 .inspector-panel label {

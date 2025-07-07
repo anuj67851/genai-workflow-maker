@@ -7,6 +7,9 @@ import {
     UserIcon,
     BeakerIcon,
     DocumentArrowUpIcon,
+    CircleStackIcon,
+    MagnifyingGlassIcon,
+    ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import useWorkflowStore from '../../stores/workflowStore';
 
@@ -27,6 +30,9 @@ const Sidebar = () => {
         { type: 'llm_response', label: 'LLM Response', icon: <ChatBubbleLeftRightIcon className="h-6 w-6 text-cyan-700" /> },
         { type: 'workflow_call', label: 'Run Workflow', icon: <BeakerIcon className="h-6 w-6 text-purple-700" /> },
         { type: 'file_ingestion', label: 'File Ingestion', icon: <DocumentArrowUpIcon className="h-6 w-6 text-orange-700" /> },
+        { type: 'vector_db_ingestion', label: 'Vector Ingestion', icon: <CircleStackIcon className="h-6 w-6 text-teal-700" /> },
+        { type: 'vector_db_query', label: 'Vector Query', icon: <MagnifyingGlassIcon className="h-6 w-6 text-teal-700" /> },
+        { type: 'cross_encoder_rerank', label: 'Rerank Results', icon: <ArrowsUpDownIcon className="h-6 w-6 text-teal-700" /> },
     ];
 
     const handleSaveWorkflow = async () => {
