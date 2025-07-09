@@ -2,11 +2,6 @@ import React from 'react';
 import BaseNode from './BaseNode';
 import { ServerStackIcon } from '@heroicons/react/24/outline';
 
-const typeStyles = {
-    http_request: { bg: 'bg-node-api', border: 'border-node-api', title: 'API Request' },
-    default: { bg: 'bg-gray-200', border: 'border-gray-400', title: 'Node' },
-};
-
 const getMethodColor = (method) => {
     switch (method?.toUpperCase()) {
         case 'GET': return 'bg-green-200 text-green-800';
@@ -19,11 +14,10 @@ const getMethodColor = (method) => {
 };
 
 const HttpRequestNode = ({ data, selected }) => {
-    const styledData = { ...data, action_type: 'http_request' };
     const method = data.http_method || 'GET';
 
     return (
-        <BaseNode data={styledData} selected={selected} typeStyles={typeStyles}>
+        <BaseNode data={data} selected={selected}>
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center gap-1">

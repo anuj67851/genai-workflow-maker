@@ -2,17 +2,10 @@ import React from 'react';
 import BaseNode from './BaseNode';
 import { ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 
-// Override typeStyles for this specific node type
-const typeStyles = {
-    cross_encoder_rerank: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Re-Rank Results' },
-};
-
 const CrossEncoderRerankNode = ({ data, selected }) => {
-    // Manually set action_type for BaseNode styling
-    const styledData = { ...data, action_type: 'cross_encoder_rerank' };
 
     return (
-        <BaseNode data={styledData} selected={selected} typeStyles={typeStyles}>
+        <BaseNode data={data} selected={selected}>
             <div className="space-y-2">
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                     <ArrowsUpDownIcon className="h-4 w-4 text-teal-600" />

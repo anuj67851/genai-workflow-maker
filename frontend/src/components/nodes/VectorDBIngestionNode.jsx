@@ -2,17 +2,9 @@ import React from 'react';
 import BaseNode from './BaseNode';
 import { CircleStackIcon } from '@heroicons/react/24/outline';
 
-// Override typeStyles for this specific node type
-const typeStyles = {
-    vector_db_ingestion: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Vector Ingestion' },
-};
-
 const VectorDBIngestionNode = ({ data, selected }) => {
-    // Manually set action_type for BaseNode styling
-    const styledData = { ...data, action_type: 'vector_db_ingestion' };
-
     return (
-        <BaseNode data={styledData} selected={selected} typeStyles={typeStyles}>
+        <BaseNode data={data} selected={selected}>
             <div className="space-y-2">
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                     <CircleStackIcon className="h-4 w-4 text-teal-600" />

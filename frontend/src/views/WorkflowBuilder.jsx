@@ -102,7 +102,7 @@ const BuilderComponent = () => {
             label: `New ${type.replace(/_/g, ' ')}`,
             description: `A new step to ${type.replace(/_/g, ' ')}.`,
             prompt_template: '',
-            output_key: `output_${Math.floor(Math.random() * 1000)}` // Pre-fill with a random key
+            output_key: `output_${Date.now()}`
         };
 
         // Custom initial data for specific node types

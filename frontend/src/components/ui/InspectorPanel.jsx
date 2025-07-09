@@ -3,6 +3,34 @@ import useWorkflowStore from '../../stores/workflowStore';
 import { TrashIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 
+const NODES_WITH_PROMPT_TEMPLATE = [
+    'agentic_tool_use',
+    'condition_check',
+    'human_input',
+    'llm_response',
+    'file_ingestion',
+    'file_storage',
+    'vector_db_query',
+];
+
+const NODES_WITH_DATA_SOURCE = [
+    'vector_db_ingestion',
+    'cross_encoder_rerank',
+];
+
+const NODES_WITH_OUTPUT_KEY = [
+    'human_input',
+    'agentic_tool_use',
+    'llm_response',
+    'workflow_call',
+    'file_ingestion',
+    'file_storage',
+    'http_request',
+    'vector_db_ingestion',
+    'vector_db_query',
+    'cross_encoder_rerank',
+];
+
 const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const { onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools } = useWorkflowStore(state => ({
         onNodesChange: state.onNodesChange,
@@ -116,7 +144,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         );
     }
 
-    const renderCommonFields = () => (
+    const renderBaseFields = () => (
         <>
             <div>
                 <label htmlFor="label">Node Label (Optional)</label>
@@ -127,14 +155,23 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 <label htmlFor="description">Description</label>
                 <input id="description" name="description" value={formData.description || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="A brief summary of this step"/>
             </div>
-            {['agentic_tool_use', 'condition_check', 'human_input', 'llm_response', 'file_ingestion', 'file_storage', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && (
-                <div>
-                    <label htmlFor="prompt_template">Prompt / Instruction</label>
-                    <textarea id="prompt_template" name="prompt_template" rows={5} value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="The detailed instruction for the LLM or user."/>
-                    <p className="text-xs text-gray-400 mt-1">You can use variables like {`{query}`} or {`{input.variable_name}`}.</p>
-                </div>
-            )}
         </>
+    );
+
+    const renderPromptTemplateField = () => (
+        <div>
+            <label htmlFor="prompt_template">Prompt / Instruction</label>
+            <textarea id="prompt_template" name="prompt_template" rows={5} value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="The detailed instruction for the LLM or user."/>
+            <p className="text-xs text-gray-400 mt-1">You can use variables like {`{query}`} or {`{input.variable_name}`}.</p>
+        </div>
+    );
+
+    const renderDataSourceField = () => (
+        <div>
+            <label htmlFor="prompt_template">Input Variable / Data Source</label>
+            <input id="prompt_template" name="prompt_template" value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="{input.variable_name}" />
+            <p className="text-xs text-gray-400 mt-1">Specify the variable holding the data for this step (e.g., from a file upload or previous step).</p>
+        </div>
     );
 
     const renderOutputKeyField = () => (
@@ -323,18 +360,25 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize">
                     Edit: {selectedNode.data.label || `${nodeType.replace(/_/g, ' ')} Node`}
                 </h3>
+
                 <div className="space-y-4">
-                    {renderCommonFields()}
+                    {renderBaseFields()}
+
+                    {NODES_WITH_PROMPT_TEMPLATE.includes(nodeType) && renderPromptTemplateField()}
+
+                    {NODES_WITH_DATA_SOURCE.includes(nodeType) && renderDataSourceField()}
+
+                    {/* Render fields specific to each node type */}
                     {nodeType === 'agentic_tool_use' && renderToolSelection()}
                     {nodeType === 'workflow_call' && renderWorkflowCallFields()}
                     {nodeType === 'file_ingestion' && renderFileIngestionFields()}
                     {nodeType === 'file_storage' && renderFileStorageFields()}
+                    {nodeType === 'http_request' && renderHttpRequestFields()}
                     {nodeType === 'vector_db_ingestion' && renderVectorDbIngestionFields()}
                     {nodeType === 'vector_db_query' && renderVectorDbQueryFields()}
                     {nodeType === 'cross_encoder_rerank' && renderCrossEncoderRerankFields()}
-                    {nodeType === 'http_request' && renderHttpRequestFields()}
 
-                    {['human_input', 'agentic_tool_use', 'llm_response', 'http_request', 'workflow_call', 'file_ingestion', 'file_storage', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && renderOutputKeyField()}
+                    {NODES_WITH_OUTPUT_KEY.includes(nodeType) && renderOutputKeyField()}
                 </div>
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">
