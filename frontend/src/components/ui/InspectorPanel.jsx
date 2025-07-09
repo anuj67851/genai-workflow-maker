@@ -33,20 +33,26 @@ const NODES_WITH_OUTPUT_KEY = [
 ];
 
 const InspectorPanel = ({ selection, currentWorkflowId }) => {
-    const { onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools } = useWorkflowStore(state => ({
+    // Get all necessary actions directly from the store hook.
+    const { onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools, updateRouteName } = useWorkflowStore(state => ({
         onNodesChange: state.onNodesChange,
         onEdgesChange: state.onEdgesChange,
         updateNodeData: state.updateNodeData,
         tools: state.tools,
         fetchTools: state.fetchTools,
+        updateRouteName: state.updateRouteName,
     }));
 
-    const [formData, setFormData] = useState({});
+    // Local state is now only for things NOT in the workflow store (like data from external APIs).
     const [availableWorkflows, setAvailableWorkflows] = useState([]);
     const selectedNode = selection?.nodes[0];
     const nodeType = selectedNode?.type.replace('Node', '');
 
-    // Fetch tools and workflows on component mount
+    // We read the node's data directly from the prop, which comes from the store.
+    // This makes the store the single source of truth.
+    const nodeData = selectedNode?.data || {};
+
+    // This useEffect is only for fetching external data.
     useEffect(() => {
         if (tools.length === 0) fetchTools();
         const fetchWorkflows = async () => {
@@ -60,75 +66,28 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         fetchWorkflows();
     }, [fetchTools, tools.length]);
 
-    // Update form data when a new node is selected
-    useEffect(() => {
-        if (selectedNode) {
-            setFormData({
-                // Common fields
-                label: '',
-                description: '',
-                prompt_template: '',
-                output_key: '',
-                // Tool fields
-                tool_selection: 'auto',
-                tool_names: [],
-                // Workflow Call fields
-                target_workflow_id: null,
-                // File Ingestion fields
-                allowed_file_types: [],
-                max_files: 1,
-                storage_path: '',
-                // RAG Fields
-                collection_name: '',
-                embedding_model: '',
-                chunk_size: 1000,
-                chunk_overlap: 200,
-                top_k: 5,
-                rerank_top_n: 3,
-                // HTTP Request Fields
-                http_method: 'GET',
-                url_template: '',
-                headers_template: '',
-                body_template: '',
-                // For Intelligent Router
-                routes: {},
-                _version: 0, // Initialize version for re-rendering
-                // Spread existing data over defaults
-                ...selectedNode.data,
-            });
+    // A single, unified handler to update the node data in the store.
+    const handleChange = (event) => {
+        if (!selectedNode) return;
+        const { name, value, type, checked } = event.target;
+        let finalValue;
+
+        if (type === 'checkbox') {
+            const currentTools = nodeData.tool_names || [];
+            finalValue = checked ? [...currentTools, name] : currentTools.filter(tool => tool !== name);
+        } else if (type === 'number') {
+            finalValue = parseInt(value, 10) || 0;
+        } else if (name === 'allowed_file_types') {
+            finalValue = value.split(',').map(item => item.trim()).filter(Boolean);
+        } else {
+            finalValue = value;
         }
-    }, [selectedNode]);
 
-    const handleInputChange = (event) => {
-        const { name, value, type } = event.target;
-        const finalValue = type === 'number' ? parseInt(value, 10) || 0 : value;
-        setFormData(prev => ({ ...prev, [name]: finalValue }));
+        const newData = { ...nodeData, [name]: finalValue };
+        updateNodeData(selectedNode.id, newData);
     };
 
-    const handleArrayInputChange = (event) => {
-        const { name, value } = event.target;
-        const arrayValue = value.split(',').map(item => item.trim()).filter(Boolean);
-        setFormData(prev => ({...prev, [name]: arrayValue}));
-    }
-
-    const handleToolSelectionChange = (event) => {
-        const { name, checked } = event.target;
-        setFormData(prev => {
-            const currentTools = prev.tool_names || [];
-            if (checked) {
-                return { ...prev, tool_names: [...currentTools, name] };
-            } else {
-                return { ...prev, tool_names: currentTools.filter(tool => tool !== name) };
-            }
-        });
-    };
-
-    const handleBlur = () => {
-        if (selectedNode) {
-            updateNodeData(selectedNode.id, formData);
-        }
-    };
-
+    // Handler for the delete button. It calls the store's change handlers.
     const handleDelete = () => {
         if (!selection || (selection.nodes.length === 0 && selection.edges.length === 0)) return;
         if (window.confirm(`Are you sure you want to delete the selected element(s)?`)) {
@@ -152,12 +111,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         <>
             <div>
                 <label htmlFor="label">Node Label (Optional)</label>
-                <input id="label" name="label" value={formData.label || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., Check User Warranty"/>
-                <p className="text-xs text-gray-400 mt-1">A custom title for this node in the graph.</p>
+                <input id="label" name="label" value={nodeData.label || ''} onChange={handleChange} placeholder="e.g., Check User Warranty"/>
             </div>
             <div>
                 <label htmlFor="description">Description</label>
-                <input id="description" name="description" value={formData.description || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="A brief summary of this step"/>
+                <input id="description" name="description" value={nodeData.description || ''} onChange={handleChange} placeholder="A brief summary of this step"/>
             </div>
         </>
     );
@@ -165,7 +123,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderPromptTemplateField = () => (
         <div>
             <label htmlFor="prompt_template">Prompt / Instruction</label>
-            <textarea id="prompt_template" name="prompt_template" rows={5} value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="The detailed instruction for the LLM or user."/>
+            <textarea id="prompt_template" name="prompt_template" rows={5} value={nodeData.prompt_template || ''} onChange={handleChange} placeholder="The detailed instruction for the LLM or user."/>
             <p className="text-xs text-gray-400 mt-1">You can use variables like {`{query}`} or {`{input.variable_name}`}.</p>
         </div>
     );
@@ -173,7 +131,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderDataSourceField = () => (
         <div>
             <label htmlFor="prompt_template">Input Variable / Data Source</label>
-            <input id="prompt_template" name="prompt_template" value={formData.prompt_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="{input.variable_name}" />
+            <input id="prompt_template" name="prompt_template" value={nodeData.prompt_template || ''} onChange={handleChange} placeholder="{input.variable_name}" />
             <p className="text-xs text-gray-400 mt-1">Specify the variable holding the data for this step (e.g., from a file upload or previous step).</p>
         </div>
     );
@@ -181,44 +139,44 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderOutputKeyField = () => (
         <div>
             <label htmlFor="output_key">Output Variable Name</label>
-            <input id="output_key" name="output_key" value={formData.output_key || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., user_email, ticket_id" />
+            <input id="output_key" name="output_key" value={nodeData.output_key || ''} onChange={handleChange} placeholder="e.g., user_email, ticket_id" />
             <p className="text-xs text-gray-400 mt-1">Saves the step's result to this variable for later use.</p>
         </div>
     );
 
     const renderToolSelection = () => {
-        const selectedToolSchemas = tools.filter(tool => formData.tool_names?.includes(tool.function.name));
+        const selectedToolSchemas = tools.filter(tool => nodeData.tool_names?.includes(tool.function.name));
         return (
             <div>
                 <label>Tool Usage</label>
                 <div className="space-y-3 rounded-md border border-gray-200 p-3 bg-white">
                     <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                        <input type="radio" id="tool_auto" name="tool_selection" value="auto" checked={formData.tool_selection === 'auto'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                        <input type="radio" id="tool_auto" name="tool_selection" value="auto" checked={nodeData.tool_selection === 'auto'} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                         <label htmlFor="tool_auto" className="text-sm font-medium text-gray-700">Let agent decide from all available tools</label>
                     </div>
                     <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                        <input type="radio" id="tool_manual" name="tool_selection" value="manual" checked={formData.tool_selection === 'manual'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                        <input type="radio" id="tool_manual" name="tool_selection" value="manual" checked={nodeData.tool_selection === 'manual'} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                         <label htmlFor="tool_manual" className="text-sm font-medium text-gray-700">Select specific tools for the agent</label>
                     </div>
                     <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                        <input type="radio" id="tool_none" name="tool_selection" value="none" checked={formData.tool_selection === 'none'} onChange={handleInputChange} onBlur={handleBlur} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                        <input type="radio" id="tool_none" name="tool_selection" value="none" checked={nodeData.tool_selection === 'none'} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
                         <label htmlFor="tool_none" className="text-sm font-medium text-gray-700">Do not use any tools (direct LLM response)</label>
                     </div>
                 </div>
 
-                {formData.tool_selection === 'manual' && (
+                {nodeData.tool_selection === 'manual' && (
                     <div className="mt-2 p-3 border border-gray-200 rounded-md bg-gray-50 max-h-48 overflow-y-auto space-y-2">
                         <p className="text-xs text-gray-500 mb-2">Select one or more tools for the agent to use:</p>
                         {tools.map(tool => (
                             <div key={tool.function.name} className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                                <input type="checkbox" id={`tool-chk-${tool.function.name}`} name={tool.function.name} checked={formData.tool_names?.includes(tool.function.name) || false} onChange={handleToolSelectionChange} onBlur={handleBlur} className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                <input type="checkbox" id={`tool-chk-${tool.function.name}`} name={tool.function.name} checked={nodeData.tool_names?.includes(tool.function.name) || false} onChange={(e) => handleChange({target: {name: 'tool_names', value: e.target.name, checked: e.target.checked, type: 'checkbox'}})} className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                                 <label htmlFor={`tool-chk-${tool.function.name}`} className="text-sm text-gray-900 font-mono">{tool.function.name}</label>
                             </div>
                         ))}
                     </div>
                 )}
 
-                {formData.tool_selection === 'manual' && selectedToolSchemas.length > 0 && (
+                {nodeData.tool_selection === 'manual' && selectedToolSchemas.length > 0 && (
                     <div className="mt-3 p-3 border border-blue-200 rounded-lg bg-blue-50 space-y-2">
                         <div className="flex items-center gap-2 text-blue-800"><InformationCircleIcon className="h-5 w-5"/><h4 className="text-sm font-bold">Tool Return Information</h4></div>
                         {selectedToolSchemas.map(tool => (
@@ -236,7 +194,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderWorkflowCallFields = () => (
         <div>
             <label htmlFor="target_workflow_id">Workflow to Execute</label>
-            <select id="target_workflow_id" name="target_workflow_id" value={formData.target_workflow_id || ''} onChange={handleInputChange} onBlur={handleBlur} >
+            <select id="target_workflow_id" name="target_workflow_id" value={nodeData.target_workflow_id || ''} onChange={handleChange} >
                 <option value="">-- Select a Workflow --</option>
                 {availableWorkflows.filter(wf => wf.id.toString() !== (currentWorkflowId || '').toString()).map(wf => (
                     <option key={wf.id} value={wf.id}>{wf.name}</option>
@@ -250,11 +208,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         <div className="space-y-4">
             <div>
                 <label htmlFor="max_files">Maximum Number of Files</label>
-                <input id="max_files" name="max_files" type="number" min="1" value={formData.max_files || 1} onChange={handleInputChange} onBlur={handleBlur} />
+                <input id="max_files" name="max_files" type="number" min="1" value={nodeData.max_files || 1} onChange={handleChange} />
             </div>
             <div>
                 <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
-                <input id="allowed_file_types" name="allowed_file_types" value={(formData.allowed_file_types || []).join(', ')} onChange={handleArrayInputChange} onBlur={handleBlur} placeholder=".pdf, .txt, .csv" />
+                <input id="allowed_file_types" name="allowed_file_types" value={(nodeData.allowed_file_types || []).join(', ')} onChange={handleChange} placeholder=".pdf, .txt, .csv" />
                 <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
             </div>
         </div>
@@ -264,16 +222,16 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         <div className="space-y-4">
             <div>
                 <label htmlFor="storage_path">Storage Subdirectory (Optional)</label>
-                <input id="storage_path" name="storage_path" value={formData.storage_path || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., ticket_attachments" />
+                <input id="storage_path" name="storage_path" value={nodeData.storage_path || ''} onChange={handleChange} placeholder="e.g., ticket_attachments" />
                 <p className="text-xs text-gray-400 mt-1">A subdirectory within the main attachments folder to save this file to.</p>
             </div>
             <div>
                 <label htmlFor="max_files">Maximum Number of Files</label>
-                <input id="max_files" name="max_files" type="number" min="1" value={formData.max_files || 1} onChange={handleInputChange} onBlur={handleBlur} />
+                <input id="max_files" name="max_files" type="number" min="1" value={nodeData.max_files || 1} onChange={handleChange} />
             </div>
             <div>
                 <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
-                <input id="allowed_file_types" name="allowed_file_types" value={(formData.allowed_file_types || []).join(', ')} onChange={handleArrayInputChange} onBlur={handleBlur} placeholder=".png, .jpg, .pdf" />
+                <input id="allowed_file_types" name="allowed_file_types" value={(nodeData.allowed_file_types || []).join(', ')} onChange={handleChange} placeholder=".png, .jpg, .pdf" />
                 <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
             </div>
         </div>
@@ -284,19 +242,19 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             <h4 className="font-bold text-teal-800">Vector Ingestion Settings</h4>
             <div>
                 <label htmlFor="collection_name">Collection Name</label>
-                <input id="collection_name" name="collection_name" value={formData.collection_name || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., project_docs_v1"/>
+                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
             </div>
             <div>
                 <label htmlFor="embedding_model">Embedding Model</label>
-                <input id="embedding_model" name="embedding_model" value={formData.embedding_model || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="text-embedding-3-small"/>
+                <input id="embedding_model" name="embedding_model" value={nodeData.embedding_model || ''} onChange={handleChange} placeholder="text-embedding-3-small"/>
             </div>
             <div>
                 <label htmlFor="chunk_size">Chunk Size</label>
-                <input id="chunk_size" name="chunk_size" type="number" min="1" value={formData.chunk_size || 1000} onChange={handleInputChange} onBlur={handleBlur} />
+                <input id="chunk_size" name="chunk_size" type="number" min="1" value={nodeData.chunk_size || 1000} onChange={handleChange} />
             </div>
             <div>
                 <label htmlFor="chunk_overlap">Chunk Overlap</label>
-                <input id="chunk_overlap" name="chunk_overlap" type="number" min="0" value={formData.chunk_overlap || 200} onChange={handleInputChange} onBlur={handleBlur} />
+                <input id="chunk_overlap" name="chunk_overlap" type="number" min="0" value={nodeData.chunk_overlap || 200} onChange={handleChange} />
             </div>
         </div>
     );
@@ -306,11 +264,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             <h4 className="font-bold text-teal-800">Vector Query Settings</h4>
             <div>
                 <label htmlFor="collection_name">Collection Name</label>
-                <input id="collection_name" name="collection_name" value={formData.collection_name || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g., project_docs_v1"/>
+                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
             </div>
             <div>
                 <label htmlFor="top_k">Top-K</label>
-                <input id="top_k" name="top_k" type="number" min="1" value={formData.top_k || 5} onChange={handleInputChange} onBlur={handleBlur} />
+                <input id="top_k" name="top_k" type="number" min="1" value={nodeData.top_k || 5} onChange={handleChange} />
                 <p className="text-xs text-gray-400 mt-1">The number of initial documents to retrieve.</p>
             </div>
         </div>
@@ -321,7 +279,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             <h4 className="font-bold text-teal-800">Re-Ranker Settings</h4>
             <div>
                 <label htmlFor="rerank_top_n">Return Top-N</label>
-                <input id="rerank_top_n" name="rerank_top_n" type="number" min="1" value={formData.rerank_top_n || 3} onChange={handleInputChange} onBlur={handleBlur} />
+                <input id="rerank_top_n" name="rerank_top_n" type="number" min="1" value={nodeData.rerank_top_n || 3} onChange={handleChange} />
                 <p className="text-xs text-gray-400 mt-1">The final number of documents to return after re-ranking.</p>
             </div>
         </div>
@@ -332,7 +290,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             <h4 className="font-bold text-slate-800">API Request Configuration</h4>
             <div>
                 <label htmlFor="http_method">HTTP Method</label>
-                <select id="http_method" name="http_method" value={formData.http_method || 'GET'} onChange={handleInputChange} onBlur={handleBlur}>
+                <select id="http_method" name="http_method" value={nodeData.http_method || 'GET'} onChange={handleChange}>
                     <option value="GET">GET</option>
                     <option value="POST">POST</option>
                     <option value="PUT">PUT</option>
@@ -342,62 +300,48 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             </div>
             <div>
                 <label htmlFor="url_template">Request URL</label>
-                <input id="url_template" name="url_template" value={formData.url_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="https://api.example.com/items/{input.item_id}" />
+                <input id="url_template" name="url_template" value={nodeData.url_template || ''} onChange={handleChange} placeholder="https://api.example.com/items/{input.item_id}" />
                 <p className="text-xs text-gray-400 mt-1">You can use variables like {`{input.var_name}`}.</p>
             </div>
             <div>
                 <label htmlFor="headers_template">Headers (JSON format)</label>
-                <textarea id="headers_template" name="headers_template" rows={4} value={formData.headers_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
+                <textarea id="headers_template" name="headers_template" rows={4} value={nodeData.headers_template || ''} onChange={handleChange} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
             </div>
-            {['POST', 'PUT', 'PATCH'].includes(formData.http_method?.toUpperCase()) && (
+            {['POST', 'PUT', 'PATCH'].includes(nodeData.http_method?.toUpperCase()) && (
                 <div>
                     <label htmlFor="body_template">Body (JSON format)</label>
-                    <textarea id="body_template" name="body_template" rows={5} value={formData.body_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
+                    <textarea id="body_template" name="body_template" rows={5} value={nodeData.body_template || ''} onChange={handleChange} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
                 </div>
             )}
         </div>
     );
 
     const renderIntelligentRouterFields = () => {
-        const currentRoutes = formData.routes || {};
+        const currentRoutes = nodeData.routes || {};
 
         const handleRouteNameChange = (oldName, newName) => {
             const trimmedNewName = newName.trim();
             if (trimmedNewName && trimmedNewName !== oldName && !currentRoutes[trimmedNewName]) {
-                const updatedRoutes = { ...currentRoutes };
-                updatedRoutes[trimmedNewName] = updatedRoutes[oldName];
-                delete updatedRoutes[oldName];
-                setFormData(prev => ({
-                    ...prev,
-                    routes: updatedRoutes,
-                    _version: (prev._version || 0) + 1
-                }));
+                // This now only needs to call the store action. It's clean and safe.
+                updateRouteName(selectedNode.id, oldName, trimmedNewName);
             }
         };
 
         const addRoute = () => {
             let i = 1;
             let newRouteName = `new_route_${i}`;
-            while(currentRoutes[newRouteName]) {
+            while (currentRoutes[newRouteName]) {
                 i++;
                 newRouteName = `new_route_${i}`;
             }
             const updatedRoutes = { ...currentRoutes, [newRouteName]: 'END' };
-            setFormData(prev => ({
-                ...prev,
-                routes: updatedRoutes,
-                _version: (prev._version || 0) + 1
-            }));
+            updateNodeData(selectedNode.id, { ...nodeData, routes: updatedRoutes });
         };
 
         const removeRoute = (routeName) => {
             const updatedRoutes = { ...currentRoutes };
             delete updatedRoutes[routeName];
-            setFormData(prev => ({
-                ...prev,
-                routes: updatedRoutes,
-                _version: (prev._version || 0) + 1
-            }));
+            updateNodeData(selectedNode.id, { ...nodeData, routes: updatedRoutes });
         };
 
         return (
@@ -431,7 +375,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
             <div className="flex-grow overflow-y-auto pr-2">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize">
-                    Edit: {selectedNode.data.label || `${nodeType.replace(/_/g, ' ')} Node`}
+                    Edit: {nodeData.label || `${nodeType.replace(/_/g, ' ')} Node`}
                 </h3>
 
                 <div className="space-y-4">

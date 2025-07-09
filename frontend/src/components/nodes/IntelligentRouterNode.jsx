@@ -3,15 +3,11 @@ import { Handle, Position } from 'reactflow';
 import BaseNode from './BaseNode';
 import { ShareIcon } from '@heroicons/react/24/outline';
 
-const IntelligentRouterNode = ({ data, selected }) => {
-    // The keys of the routes dictionary are the names of our output handles
+const IntelligentRouterNode = ({ id, data, selected }) => { // Destructure 'id' from props
     const routes = data.routes ? Object.keys(data.routes) : [];
-
-    // This calculation ensures handles are evenly spaced, even for 1 handle
     const handleStep = routes.length > 1 ? 1 / (routes.length + 1) : 0.5;
 
     return (
-        // We pass the raw data to BaseNode. BaseNode will handle the styling.
         <BaseNode data={data} selected={selected}>
             <div className="space-y-2">
                 <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -29,7 +25,8 @@ const IntelligentRouterNode = ({ data, selected }) => {
             {/* Dynamically create a handle for each route name */}
             {routes.map((routeName, index) => (
                 <Handle
-                    key={routeName}
+                    // *** THE KEY FIX: Make the key stable and unique ***
+                    key={`${id}-${routeName}`}
                     type="source"
                     position={Position.Bottom}
                     id={routeName} // The ID MUST match the route name for connections
