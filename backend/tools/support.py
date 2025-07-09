@@ -7,10 +7,8 @@ from typing import Dict, Any
 # Get a logger for this specific module
 logger = logging.getLogger(__name__)
 
-# --- NEW: Define a directory for ticket outputs ---
+# --- Define a directory for ticket outputs ---
 TICKET_OUTPUT_DIR = "./ticket_outputs"
-# Ensure the directory exists when the module is loaded
-os.makedirs(TICKET_OUTPUT_DIR, exist_ok=True)
 
 
 def check_customer_plan(email: str) -> str:
@@ -51,6 +49,9 @@ def create_support_ticket(details: str) -> Dict[str, Any]:
             f"--- Full Details Provided to Ticketing System ---\n"
             f"{details}\n"
         )
+
+        # Ensure the directory exists when the module is loaded
+        os.makedirs(TICKET_OUTPUT_DIR, exist_ok=True)
 
         # 2. Define the output file path
         file_path = os.path.join(TICKET_OUTPUT_DIR, f"{ticket_id}.txt")

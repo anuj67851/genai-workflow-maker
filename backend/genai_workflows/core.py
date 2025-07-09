@@ -6,11 +6,6 @@ import logging
 import uuid
 from typing import Dict, List, Optional, Any
 
-from PIL import Image
-import pytesseract
-import PyPDF2
-import io
-
 from fastapi import UploadFile
 
 from .workflow import Workflow

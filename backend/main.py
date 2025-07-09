@@ -1,5 +1,4 @@
 import os
-import shutil
 import json
 import logging
 from contextlib import asynccontextmanager

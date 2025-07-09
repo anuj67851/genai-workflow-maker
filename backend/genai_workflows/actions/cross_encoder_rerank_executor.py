@@ -30,7 +30,7 @@ class CrossEncoderRerankAction(BaseActionExecutor):
             elif isinstance(input_data_str, dict):
                 input_data = input_data_str
             else:
-                return {"step_id": step.step_id, "success": False, "error": f"Rerank step received unexpected input type: {type(input_data)}"}
+                return {"step_id": step.step_id, "success": False, "error": f"Rerank step received unexpected input type: {type(input_data_str)}"}
 
             if 'query' not in input_data or 'retrieved_docs' not in input_data:
                 return {"step_id": step.step_id, "success": False, "error": "Rerank step input missing 'query' or 'retrieved_docs' keys."}
