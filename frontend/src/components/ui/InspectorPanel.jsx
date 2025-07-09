@@ -335,13 +335,55 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 newRouteName = `new_route_${i}`;
             }
             const updatedRoutes = { ...currentRoutes, [newRouteName]: 'END' };
-            updateNodeData(selectedNode.id, { ...nodeData, routes: updatedRoutes });
+
+            console.log(`Adding new route ${newRouteName} to node ${selectedNode.id}`);
+
+            // First update with the new route
+            const currentVersion = nodeData._version || 0;
+            updateNodeData(selectedNode.id, { 
+                ...nodeData, 
+                routes: updatedRoutes,
+                _version: currentVersion + 1
+            });
+
+            // Then increment version again after a delay to ensure ReactFlow recognizes the new handles
+            setTimeout(() => {
+                const updatedNode = selectedNode;
+                if (updatedNode) {
+                    const latestVersion = updatedNode.data._version || 0;
+                    console.log(`Incrementing version for node ${selectedNode.id} from ${latestVersion} to ${latestVersion + 1} after delay (addRoute)`);
+                    updateNodeData(selectedNode.id, {
+                        _version: latestVersion + 1
+                    });
+                }
+            }, 50); // 50ms delay
         };
 
         const removeRoute = (routeName) => {
             const updatedRoutes = { ...currentRoutes };
             delete updatedRoutes[routeName];
-            updateNodeData(selectedNode.id, { ...nodeData, routes: updatedRoutes });
+
+            console.log(`Removing route ${routeName} from node ${selectedNode.id}`);
+
+            // First update with the route removed
+            const currentVersion = nodeData._version || 0;
+            updateNodeData(selectedNode.id, { 
+                ...nodeData, 
+                routes: updatedRoutes,
+                _version: currentVersion + 1
+            });
+
+            // Then increment version again after a delay to ensure ReactFlow recognizes the updated handles
+            setTimeout(() => {
+                const updatedNode = selectedNode;
+                if (updatedNode) {
+                    const latestVersion = updatedNode.data._version || 0;
+                    console.log(`Incrementing version for node ${selectedNode.id} from ${latestVersion} to ${latestVersion + 1} after delay (removeRoute)`);
+                    updateNodeData(selectedNode.id, {
+                        _version: latestVersion + 1
+                    });
+                }
+            }, 50); // 50ms delay
         };
 
         return (

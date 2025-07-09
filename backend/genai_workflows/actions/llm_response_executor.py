@@ -23,7 +23,7 @@ class LlmResponseAction(BaseActionExecutor):
         """
         messages = [{"role": "user", "content": structured_prompt}]
         try:
-            response = self.client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.5)
+            response = await self.client.chat.completions.create(model="gpt-4o-mini", messages=messages, temperature=0.5)
             llm_output = response.choices[0].message.content
             return {"step_id": step.step_id, "success": True, "type": "llm_response", "output": llm_output}
         except Exception as e:

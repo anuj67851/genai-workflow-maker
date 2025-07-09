@@ -26,7 +26,7 @@ class ConditionCheckAction(BaseActionExecutor):
         4. Provide your final answer in a <final_answer> XML tag. The answer must be ONLY the word TRUE or FALSE.
         """
         try:
-            response = self.client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.0)
+            response = await self.client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.0)
             result_text = response.choices[0].message.content
             match = re.search(r'<final_answer>\s*(TRUE|FALSE)\s*</final_answer>', result_text, re.IGNORECASE)
 

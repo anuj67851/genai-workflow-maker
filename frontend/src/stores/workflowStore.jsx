@@ -74,6 +74,9 @@ const useWorkflowStore = create((set, get) => ({
     },
 
     updateRouteName: (nodeId, oldName, newName) => {
+        console.log("Updating route name from", oldName, "to", newName, "for node", nodeId);
+
+        // First, update the node data and remove any connected edges
         set((state) => ({
             // 1. Update the node's data to rename the route key.
             nodes: state.nodes.map(node => {
@@ -88,7 +91,16 @@ const useWorkflowStore = create((set, get) => ({
                         }
                         return acc;
                     }, {});
-                    return { ...node, data: { ...node.data, routes: newRoutes } };
+                    // Increment the version to force a re-render of the node with new handles
+                    const currentVersion = node.data._version || 0;
+                    return { 
+                        ...node, 
+                        data: { 
+                            ...node.data, 
+                            routes: newRoutes,
+                            _version: currentVersion + 1 
+                        } 
+                    };
                 }
                 return node;
             }),
@@ -98,6 +110,26 @@ const useWorkflowStore = create((set, get) => ({
                 !(edge.source === nodeId && edge.sourceHandle === oldName)
             ),
         }));
+
+        // Then, after a small delay, increment the version again to ensure ReactFlow recognizes the new handles
+        setTimeout(() => {
+            set((state) => ({
+                nodes: state.nodes.map(node => {
+                    if (node.id === nodeId) {
+                        const currentVersion = node.data._version || 0;
+                        console.log(`Incrementing version for node ${nodeId} from ${currentVersion} to ${currentVersion + 1} after delay`);
+                        return {
+                            ...node,
+                            data: {
+                                ...node.data,
+                                _version: currentVersion + 1
+                            }
+                        };
+                    }
+                    return node;
+                })
+            }));
+        }, 50); // 50ms delay
     },
 
     setFlow: (flow) => {
