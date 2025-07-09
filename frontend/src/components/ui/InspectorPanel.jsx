@@ -11,6 +11,7 @@ const NODES_WITH_PROMPT_TEMPLATE = [
     'file_ingestion',
     'file_storage',
     'vector_db_query',
+    'intelligent_router',
 ];
 
 const NODES_WITH_DATA_SOURCE = [
@@ -89,6 +90,8 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 url_template: '',
                 headers_template: '',
                 body_template: '',
+                // For Intelligent Router
+                routes: {},
                 // Spread existing data over defaults
                 ...selectedNode.data,
             });
@@ -354,6 +357,58 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         </div>
     );
 
+    const renderIntelligentRouterFields = () => {
+        const currentRoutes = formData.routes || {};
+
+        const handleRouteNameChange = (oldName, newName) => {
+            if (newName && newName !== oldName) {
+                const updatedRoutes = { ...currentRoutes };
+                updatedRoutes[newName] = updatedRoutes[oldName];
+                delete updatedRoutes[oldName];
+                setFormData(prev => ({ ...prev, routes: updatedRoutes }));
+            }
+        };
+
+        const addRoute = () => {
+            const newRouteName = `new_route_${Object.keys(currentRoutes).length + 1}`;
+            if (currentRoutes[newRouteName]) return; // Avoid collision
+            const updatedRoutes = { ...currentRoutes, [newRouteName]: 'END' };
+            setFormData(prev => ({ ...prev, routes: updatedRoutes, _version: (prev._version || 0) + 1 }));
+        };
+
+        const removeRoute = (routeName) => {
+            const updatedRoutes = { ...currentRoutes };
+            delete updatedRoutes[routeName];
+            setFormData(prev => ({ ...prev, routes: updatedRoutes, _version: (prev._version || 0) + 1 }));
+        };
+
+        return (
+            <div className="space-y-4 p-3 bg-fuchsia-50 border border-fuchsia-300 rounded-lg">
+                <h4 className="font-bold text-fuchsia-800">Routing Options</h4>
+                <p className="text-xs text-gray-500 -mt-2">Define the possible output paths. The LLM will be forced to choose one of these names. The edge connections on the node will be based on these names.</p>
+                <div className="space-y-2">
+                    {Object.keys(currentRoutes).map(routeName => (
+                        <div key={routeName} className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                defaultValue={routeName}
+                                onBlur={(e) => handleRouteNameChange(routeName, e.target.value.trim())}
+                                placeholder="Route Name"
+                                className="flex-grow p-1 border border-gray-300 rounded-md"
+                            />
+                            <button onClick={() => removeRoute(routeName)} className="p-1 text-red-500 hover:text-red-700">
+                                <TrashIcon className="h-5 w-5" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+                <button onClick={addRoute} className="w-full text-sm bg-fuchsia-200 text-fuchsia-800 font-semibold py-1 px-3 rounded-md hover:bg-fuchsia-300 transition-colors">
+                    + Add Route
+                </button>
+            </div>
+        );
+    };
+
     return (
         <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
             <div className="flex-grow overflow-y-auto pr-2">
@@ -377,6 +432,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                     {nodeType === 'vector_db_ingestion' && renderVectorDbIngestionFields()}
                     {nodeType === 'vector_db_query' && renderVectorDbQueryFields()}
                     {nodeType === 'cross_encoder_rerank' && renderCrossEncoderRerankFields()}
+                    {nodeType === 'intelligent_router' && renderIntelligentRouterFields()}
 
                     {NODES_WITH_OUTPUT_KEY.includes(nodeType) && renderOutputKeyField()}
                 </div>

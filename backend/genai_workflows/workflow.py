@@ -7,7 +7,7 @@ class WorkflowStep:
     """Represents a single, atomic step in a workflow."""
     step_id: str
     description: str
-    action_type: str  # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage', 'http_request'
+    action_type: str  # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage', 'http_request', 'intelligent_router'
     prompt_template: Optional[str] = None
     on_success: str = 'END'
     on_failure: Optional[str] = None
@@ -41,6 +41,10 @@ class WorkflowStep:
     url_template: Optional[str] = None
     headers_template: Optional[str] = None # JSON string
     body_template: Optional[str] = None # JSON string
+
+    # --- Fields for 'intelligent_router' ---
+    # Stores a mapping of route names to target step_ids. E.g., {"billing": "ask_billing_question", "technical": "create_tech_ticket"}
+    routes: Optional[Dict[str, str]] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         # Exclude fields with default or None values for cleaner serialization, if desired.

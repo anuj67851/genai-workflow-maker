@@ -41,8 +41,15 @@ const useWorkflowStore = create((set, get) => ({
         });
     },
     onConnect: (connection) => {
+        // When connecting from a router, the handleId is the route name.
+        // We need to ensure this is passed to the edge object.
+        const newEdge = {
+            ...connection,
+            id: `edge-${connection.source}-${connection.target}-${connection.sourceHandle || 'default'}`,
+            type: 'smoothstep', // A nicer edge type
+        };
         set({
-            edges: addEdge(connection, get().edges),
+            edges: addEdge(newEdge, get().edges),
         });
     },
     addNode: (newNode) => {
@@ -72,10 +79,54 @@ const useWorkflowStore = create((set, get) => ({
     // This function gathers the current state into the format the backend API expects.
     getFlowAsJson: () => {
         const { nodes, edges, workflowName, workflowDescription } = get();
+
+        // Create a mutable copy of nodes to update their data
+        const processedNodes = JSON.parse(JSON.stringify(nodes));
+
+        // Iterate over a copy of nodes to avoid mutation issues during loop
+        for (const node of processedNodes) {
+            if (node.data.action_type === 'condition_check') {
+                // Find edges originating from this condition node's specific handles
+                const successEdge = edges.find(e => e.source === node.id && e.sourceHandle === 'onSuccess');
+                const failureEdge = edges.find(e => e.source === node.id && e.sourceHandle === 'onFailure');
+
+                // Update the node's data with the correct next step IDs
+                node.data.on_success = successEdge ? successEdge.target : 'END';
+                node.data.on_failure = failureEdge ? failureEdge.target : 'END';
+            } else if (node.data.action_type === 'intelligent_router') {
+                // For the router, we rebuild the `routes` dictionary based on visual connections
+                const newRoutes = {};
+                const outgoingEdges = edges.filter(e => e.source === node.id);
+
+                for (const edge of outgoingEdges) {
+                    if (edge.sourceHandle) { // sourceHandle is the route name
+                        newRoutes[edge.sourceHandle] = edge.target;
+                    }
+                }
+                node.data.routes = newRoutes;
+
+                // Routers don't use on_success/on_failure in the backend, but we clear them for consistency
+                node.data.on_success = null;
+                node.data.on_failure = null;
+            } else if (node.type !== 'startNode' && node.type !== 'endNode') {
+                // For all other standard nodes
+                const successEdge = edges.find(e => e.source === node.id && (e.sourceHandle === null || e.sourceHandle === undefined));
+                node.data.on_success = successEdge ? successEdge.target : 'END';
+
+                // Standard nodes might have a failure path (e.g., http_request)
+                const failureEdge = edges.find(e => e.source === node.id && e.sourceHandle === 'onFailure');
+                if (failureEdge) {
+                    node.data.on_failure = failureEdge.target;
+                }
+            }
+        }
+
         return {
             name: workflowName,
             description: workflowDescription,
-            nodes: nodes,
+            // Return the processed nodes with updated routing data
+            nodes: processedNodes,
+            // The visual edges are still useful for re-loading the flow
             edges: edges,
         };
     },

@@ -19,6 +19,7 @@ from .actions.vector_db_query_executor import VectorDbQueryAction
 from .actions.workflow_call_executor import WorkflowCallAction
 from .actions.file_storage_executor import FileStorageAction
 from .actions.http_request_executor import HttpRequestAction
+from .actions.intelligent_router_executor import IntelligentRouterAction
 
 
 if TYPE_CHECKING:
@@ -54,6 +55,7 @@ class WorkflowExecutor:
             "vector_db_query": VectorDbQueryAction,
             "workflow_call": WorkflowCallAction,
             "http_request": HttpRequestAction,
+            "intelligent_router": IntelligentRouterAction,
         }
 
     async def execute(self, workflow: Workflow, execution_state: Dict[str, Any]) -> Dict[str, Any]:
@@ -92,7 +94,12 @@ class WorkflowExecutor:
                 execution_state["step_history"].append(result)
 
                 if result.get("success"):
-                    execution_state["current_step_id"] = step.on_success
+                    # Check for a dynamic override from the router first
+                    if "next_step_override" in result:
+                        execution_state["current_step_id"] = result["next_step_override"]
+                    else:
+                        # Fallback to the statically defined path
+                        execution_state["current_step_id"] = step.on_success
                 else:
                     if step.on_failure:
                         execution_state["current_step_id"] = step.on_failure

@@ -27,6 +27,7 @@ import VectorDBQueryNode from '../components/nodes/VectorDBQueryNode';
 import CrossEncoderRerankNode from '../components/nodes/CrossEncoderRerankNode';
 import FileStorageNode from '../components/nodes/FileStorageNode';
 import HttpRequestNode from '../components/nodes/HttpRequestNode';
+import IntelligentRouterNode from '../components/nodes/IntelligentRouterNode';
 
 
 import useWorkflowStore from '../stores/workflowStore';
@@ -46,6 +47,7 @@ const nodeTypes = {
     vector_db_queryNode: VectorDBQueryNode,
     cross_encoder_rerankNode: CrossEncoderRerankNode,
     http_requestNode: HttpRequestNode,
+    intelligent_routerNode: IntelligentRouterNode,
 };
 
 const initialNodes = [
@@ -137,6 +139,14 @@ const BuilderComponent = () => {
             defaultData.headers_template = '{\n  "Accept": "application/json"\n}';
             defaultData.body_template = '';
             defaultData.prompt_template = null; // Not used by this node type
+        }
+        if(type === 'intelligent_router') {
+            defaultData.prompt_template = 'Based on the user query, which category does it fall into?';
+            defaultData.routes = {
+                "option_1": "END", // Pre-fill with example routes
+                "option_2": "END",
+            };
+            defaultData.output_key = null; // Router doesn't typically save output
         }
 
 

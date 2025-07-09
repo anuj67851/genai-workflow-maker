@@ -13,6 +13,7 @@ const typeStyles = {
     vector_db_query: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Vector Query' },
     cross_encoder_rerank: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Re-Rank Results' },
     http_request: { bg: 'bg-node-api', border: 'border-node-api', title: 'API Request' },
+    intelligent_router: { bg: 'bg-node-router', border: 'border-node-router', title: 'Intelligent Router' },
     default: { bg: 'bg-gray-200', border: 'border-gray-400', title: 'Node' },
 };
 
