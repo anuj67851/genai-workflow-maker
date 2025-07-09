@@ -92,6 +92,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 body_template: '',
                 // For Intelligent Router
                 routes: {},
+                _version: 0, // Initialize version for re-rendering
                 // Spread existing data over defaults
                 ...selectedNode.data,
             });
@@ -361,38 +362,55 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         const currentRoutes = formData.routes || {};
 
         const handleRouteNameChange = (oldName, newName) => {
-            if (newName && newName !== oldName) {
+            const trimmedNewName = newName.trim();
+            if (trimmedNewName && trimmedNewName !== oldName && !currentRoutes[trimmedNewName]) {
                 const updatedRoutes = { ...currentRoutes };
-                updatedRoutes[newName] = updatedRoutes[oldName];
+                updatedRoutes[trimmedNewName] = updatedRoutes[oldName];
                 delete updatedRoutes[oldName];
-                setFormData(prev => ({ ...prev, routes: updatedRoutes }));
+                setFormData(prev => ({
+                    ...prev,
+                    routes: updatedRoutes,
+                    _version: (prev._version || 0) + 1
+                }));
             }
         };
 
         const addRoute = () => {
-            const newRouteName = `new_route_${Object.keys(currentRoutes).length + 1}`;
-            if (currentRoutes[newRouteName]) return; // Avoid collision
+            let i = 1;
+            let newRouteName = `new_route_${i}`;
+            while(currentRoutes[newRouteName]) {
+                i++;
+                newRouteName = `new_route_${i}`;
+            }
             const updatedRoutes = { ...currentRoutes, [newRouteName]: 'END' };
-            setFormData(prev => ({ ...prev, routes: updatedRoutes, _version: (prev._version || 0) + 1 }));
+            setFormData(prev => ({
+                ...prev,
+                routes: updatedRoutes,
+                _version: (prev._version || 0) + 1
+            }));
         };
 
         const removeRoute = (routeName) => {
             const updatedRoutes = { ...currentRoutes };
             delete updatedRoutes[routeName];
-            setFormData(prev => ({ ...prev, routes: updatedRoutes, _version: (prev._version || 0) + 1 }));
+            setFormData(prev => ({
+                ...prev,
+                routes: updatedRoutes,
+                _version: (prev._version || 0) + 1
+            }));
         };
 
         return (
             <div className="space-y-4 p-3 bg-fuchsia-50 border border-fuchsia-300 rounded-lg">
                 <h4 className="font-bold text-fuchsia-800">Routing Options</h4>
-                <p className="text-xs text-gray-500 -mt-2">Define the possible output paths. The LLM will be forced to choose one of these names. The edge connections on the node will be based on these names.</p>
+                <p className="text-xs text-gray-500 -mt-2">Define output paths. The LLM will choose one. The handle ID on the node must match the route name.</p>
                 <div className="space-y-2">
                     {Object.keys(currentRoutes).map(routeName => (
                         <div key={routeName} className="flex items-center gap-2">
                             <input
                                 type="text"
                                 defaultValue={routeName}
-                                onBlur={(e) => handleRouteNameChange(routeName, e.target.value.trim())}
+                                onBlur={(e) => handleRouteNameChange(routeName, e.target.value)}
                                 placeholder="Route Name"
                                 className="flex-grow p-1 border border-gray-300 rounded-md"
                             />

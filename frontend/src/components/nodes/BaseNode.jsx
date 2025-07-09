@@ -58,7 +58,7 @@ const BaseNode = ({ data, selected, children }) => {
                     <Handle type="source" position={Position.Bottom} id="onSuccess" style={{ left: '33%' }} className="!w-4 !h-4 !bg-green-500" />
                     <Handle type="source" position={Position.Bottom} id="onFailure" style={{ left: '66%' }} className="!w-4 !h-4 !bg-red-500" />
                 </>
-            ) : (
+            ) : action_type === 'intelligent_router' ? null : (
                 <Handle type="source" position={Position.Bottom} className="!w-4 !h-4 !bg-gray-500" />
             )}
         </div>

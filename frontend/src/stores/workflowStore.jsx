@@ -80,41 +80,64 @@ const useWorkflowStore = create((set, get) => ({
     getFlowAsJson: () => {
         const { nodes, edges, workflowName, workflowDescription } = get();
 
-        // Create a mutable copy of nodes to update their data
+        // We work on a deep copy to avoid mutating the live state.
         const processedNodes = JSON.parse(JSON.stringify(nodes));
 
-        // Iterate over a copy of nodes to avoid mutation issues during loop
-        for (const node of processedNodes) {
-            if (node.data.action_type === 'condition_check') {
-                // Find edges originating from this condition node's specific handles
-                const successEdge = edges.find(e => e.source === node.id && e.sourceHandle === 'onSuccess');
-                const failureEdge = edges.find(e => e.source === node.id && e.sourceHandle === 'onFailure');
+        // Create a map of all edges for efficient lookup.
+        const edgesBySource = edges.reduce((acc, edge) => {
+            if (!acc[edge.source]) {
+                acc[edge.source] = [];
+            }
+            acc[edge.source].push(edge);
+            return acc;
+        }, {});
 
-                // Update the node's data with the correct next step IDs
+        // Iterate over the processed nodes to update their connection data.
+        for (const node of processedNodes) {
+            // Skip Start and End nodes as they have no incoming logic.
+            if (node.type === 'startNode' || node.type === 'endNode') {
+                continue;
+            }
+
+            const outgoingEdges = edgesBySource[node.id] || [];
+
+            // Clear any pre-existing connection data to ensure a clean slate.
+            node.data.on_success = null;
+            node.data.on_failure = null;
+
+            if (node.data.action_type === 'condition_check') {
+                // Find edges originating from this condition node's specific handles.
+                const successEdge = outgoingEdges.find(e => e.sourceHandle === 'onSuccess');
+                const failureEdge = outgoingEdges.find(e => e.sourceHandle === 'onFailure');
+
+                // Update the node's data with the correct next step IDs.
                 node.data.on_success = successEdge ? successEdge.target : 'END';
                 node.data.on_failure = failureEdge ? failureEdge.target : 'END';
-            } else if (node.data.action_type === 'intelligent_router') {
-                // For the router, we rebuild the `routes` dictionary based on visual connections
-                const newRoutes = {};
-                const outgoingEdges = edges.filter(e => e.source === node.id);
 
+            } else if (node.data.action_type === 'intelligent_router') {
+                // For the router, we rebuild the `routes` dictionary based on visual connections.
+                const newRoutes = {};
                 for (const edge of outgoingEdges) {
-                    if (edge.sourceHandle) { // sourceHandle is the route name
+                    // sourceHandle is the route name, e.g., "billing_inquiry"
+                    if (edge.sourceHandle) {
                         newRoutes[edge.sourceHandle] = edge.target;
                     }
                 }
                 node.data.routes = newRoutes;
+                // Routers don't use on_success/on_failure, they are cleared above.
 
-                // Routers don't use on_success/on_failure in the backend, but we clear them for consistency
-                node.data.on_success = null;
-                node.data.on_failure = null;
-            } else if (node.type !== 'startNode' && node.type !== 'endNode') {
-                // For all other standard nodes
-                const successEdge = edges.find(e => e.source === node.id && (e.sourceHandle === null || e.sourceHandle === undefined));
+            } else {
+                // For all other standard nodes (Tool, LLM, Human Input, etc.).
+                // These nodes have one primary success path and potentially a failure path.
+
+                // The main success path comes from the default handle (null or undefined).
+                const successEdge = outgoingEdges.find(e => e.sourceHandle === null || e.sourceHandle === undefined);
                 node.data.on_success = successEdge ? successEdge.target : 'END';
 
-                // Standard nodes might have a failure path (e.g., http_request)
-                const failureEdge = edges.find(e => e.source === node.id && e.sourceHandle === 'onFailure');
+                // Some standard nodes might have a failure path (e.g., http_request).
+                // This is a generic way to handle it if you add more complex nodes.
+                // For now, it's good future-proofing.
+                const failureEdge = outgoingEdges.find(e => e.sourceHandle === 'onFailure');
                 if (failureEdge) {
                     node.data.on_failure = failureEdge.target;
                 }
@@ -124,9 +147,9 @@ const useWorkflowStore = create((set, get) => ({
         return {
             name: workflowName,
             description: workflowDescription,
-            // Return the processed nodes with updated routing data
+            // Return the processed nodes with updated routing data.
             nodes: processedNodes,
-            // The visual edges are still useful for re-loading the flow
+            // The visual edges are still useful for re-loading the flow into the UI.
             edges: edges,
         };
     },

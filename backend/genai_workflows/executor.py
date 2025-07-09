@@ -95,12 +95,12 @@ class WorkflowExecutor:
 
                 if result.get("success"):
                     # Check for a dynamic override from the router first
-                    if "next_step_override" in result:
+                    if "next_step_override" in result and result["next_step_override"]:
                         execution_state["current_step_id"] = result["next_step_override"]
                     else:
                         # Fallback to the statically defined path
                         execution_state["current_step_id"] = step.on_success
-                else:
+                else: # Failed
                     if step.on_failure:
                         execution_state["current_step_id"] = step.on_failure
                     else:

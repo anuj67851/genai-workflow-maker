@@ -172,7 +172,7 @@ const BuilderComponent = () => {
             <Sidebar />
             <div className="flex-grow h-full" ref={reactFlowWrapper}>
                 <ReactFlow
-                    nodes={nodes}
+                    nodes={nodes.map(n => ({ ...n, key: `${n.id}-${n.data._version || 0}` }))}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
