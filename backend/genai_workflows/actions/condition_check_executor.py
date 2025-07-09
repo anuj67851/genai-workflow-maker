@@ -9,7 +9,7 @@ from ..workflow import WorkflowStep
 logger = logging.getLogger(__name__)
 
 class ConditionCheckAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
         prompt = f"""
         Analyze the following execution history and context to determine if a specific condition is met.

@@ -31,7 +31,7 @@ class WorkflowEngine:
 
     def __init__(self, openai_api_key: str, db_path: str = "workflows.db"):
         """Initializes all components of the workflow system."""
-        self.client = openai.OpenAI(api_key=openai_api_key)
+        self.client = openai.AsyncOpenAI(api_key=openai_api_key)
         self.storage = WorkflowStorage(db_path)
         self.tool_registry = ToolRegistry()
         self.router = WorkflowRouter(self.client)
@@ -101,7 +101,7 @@ class WorkflowEngine:
             return {"status": "failed", "error": f"Workflow paused for file upload on an unsupported step type: {paused_step.action_type}"}
 
         # Call the standard resume logic with the correctly prepared output
-        return self.resume_execution(execution_id, final_output)
+        return await self.resume_execution(execution_id, final_output)
 
     def create_workflow_interactively(self, name: str, description: str, owner: str = "default") -> InteractiveWorkflowParser:
         """
@@ -118,7 +118,7 @@ class WorkflowEngine:
         self.logger.info(f"Successfully saved workflow '{workflow.name}' with ID {workflow_id}")
         return workflow_id
 
-    def start_execution(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def start_execution(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Finds the best workflow for a query via the router and starts a new execution.
         """
@@ -129,9 +129,9 @@ class WorkflowEngine:
             self.logger.warning(f"No matching workflow found for query: '{query}'.")
             return { "status": "failed", "error": "No matching workflow found." }
 
-        return self._init_and_run(matching_workflow, query, context)
+        return await self._init_and_run(matching_workflow, query, context)
 
-    def start_execution_by_id(self, workflow_id: int, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def start_execution_by_id(self, workflow_id: int, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Starts a new execution for a specific workflow ID, bypassing the router.
         """
@@ -140,9 +140,9 @@ class WorkflowEngine:
             self.logger.error(f"Execution start failed: Workflow with ID {workflow_id} not found.")
             return { "status": "failed", "error": f"Workflow with ID {workflow_id} not found."}
 
-        return self._init_and_run(workflow, query, context)
+        return await self._init_and_run(workflow, query, context)
 
-    def _init_and_run(self, workflow: Workflow, query: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _init_and_run(self, workflow: Workflow, query: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Private helper to initialize state and start the execution loop for a given workflow.
         """
@@ -160,9 +160,9 @@ class WorkflowEngine:
         }
 
         self.logger.info(f"Starting new execution {execution_id} for workflow '{workflow.name}' (ID: {workflow.id})")
-        return self._run_execution_loop(workflow, initial_state)
+        return await self._run_execution_loop(workflow, initial_state)
 
-    def resume_execution(self, execution_id: str, user_input: Any) -> Dict[str, Any]:
+    async def resume_execution(self, execution_id: str, user_input: Any) -> Dict[str, Any]:
         """Resumes a paused workflow with the provided human input (text or file)."""
         paused_state = self.storage.get_execution_state(execution_id)
         if not paused_state:
@@ -202,16 +202,16 @@ class WorkflowEngine:
         paused_state["current_step_id"] = next_step_id
         self.logger.info(f"Advancing state from '{paused_step_id}' to next step: '{next_step_id}'.")
 
-        return self._run_execution_loop(workflow, paused_state)
+        return await self._run_execution_loop(workflow, paused_state)
 
-    def _run_execution_loop(self, workflow: Workflow, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_execution_loop(self, workflow: Workflow, state: Dict[str, Any]) -> Dict[str, Any]:
         """
 
         Internal method that calls the executor and handles the result,
         managing state persistence in the database.
         """
         try:
-            result = self.executor.execute(workflow, state)
+            result = await self.executor.execute(workflow, state)
             status = result["status"]
             execution_id = result["state"]["execution_id"]
 

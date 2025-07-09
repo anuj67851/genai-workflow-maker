@@ -7,7 +7,7 @@ from ..workflow import WorkflowStep
 logger = logging.getLogger(__name__)
 
 class WorkflowCallAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         """Loads and executes a sub-workflow, then returns its final result."""
         logger.info(f"Executing sub-workflow for step '{step.step_id}'.")
         target_id = step.target_workflow_id
@@ -28,7 +28,7 @@ class WorkflowCallAction(BaseActionExecutor):
         query = state.get("query")
 
         # We use the main engine's execution entry point to run the sub-workflow.
-        result = self.engine._init_and_run(sub_workflow, query, sub_context)
+        result = await self.engine._init_and_run(sub_workflow, query, sub_context)
 
         if result.get("status") == "completed":
             logger.info(f"Sub-workflow '{sub_workflow.name}' completed successfully.")

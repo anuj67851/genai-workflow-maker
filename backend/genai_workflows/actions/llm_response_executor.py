@@ -8,7 +8,7 @@ from ..workflow import WorkflowStep
 logger = logging.getLogger(__name__)
 
 class LlmResponseAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
         structured_prompt = f"""
         You are an assistant generating a user-facing response based on the instruction: "{filled_prompt}".

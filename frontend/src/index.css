@@ -30,6 +30,7 @@ code {
     .bg-node-file { @apply bg-orange-100; }
     .bg-node-start { @apply bg-gray-100; }
     .bg-node-vector { @apply bg-teal-100; }
+    .bg-node-api { @apply bg-slate-100; }
 
 
     /* Define border colors */
@@ -41,6 +42,7 @@ code {
     .border-node-file { @apply border-orange-300; }
     .border-node-start { @apply border-gray-300; }
     .border-node-vector { @apply border-teal-300; }
+    .border-node-api { @apply border-slate-300; }
 }
 
 

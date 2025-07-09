@@ -56,6 +56,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 chunk_overlap: 200,
                 top_k: 5,
                 rerank_top_n: 3,
+                // HTTP Request Fields
+                http_method: 'GET',
+                url_template: '',
+                headers_template: '',
+                body_template: '',
                 // Spread existing data over defaults
                 ...selectedNode.data,
             });
@@ -281,6 +286,36 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         </div>
     );
 
+    const renderHttpRequestFields = () => (
+        <div className="space-y-4 p-3 bg-slate-50 border border-slate-300 rounded-lg">
+            <h4 className="font-bold text-slate-800">API Request Configuration</h4>
+            <div>
+                <label htmlFor="http_method">HTTP Method</label>
+                <select id="http_method" name="http_method" value={formData.http_method || 'GET'} onChange={handleInputChange} onBlur={handleBlur}>
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="PATCH">PATCH</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div>
+                <label htmlFor="url_template">Request URL</label>
+                <input id="url_template" name="url_template" value={formData.url_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder="https://api.example.com/items/{input.item_id}" />
+                <p className="text-xs text-gray-400 mt-1">You can use variables like {`{input.var_name}`}.</p>
+            </div>
+            <div>
+                <label htmlFor="headers_template">Headers (JSON format)</label>
+                <textarea id="headers_template" name="headers_template" rows={4} value={formData.headers_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
+            </div>
+            {['POST', 'PUT', 'PATCH'].includes(formData.http_method?.toUpperCase()) && (
+                <div>
+                    <label htmlFor="body_template">Body (JSON format)</label>
+                    <textarea id="body_template" name="body_template" rows={5} value={formData.body_template || ''} onChange={handleInputChange} onBlur={handleBlur} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
@@ -297,8 +332,9 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                     {nodeType === 'vector_db_ingestion' && renderVectorDbIngestionFields()}
                     {nodeType === 'vector_db_query' && renderVectorDbQueryFields()}
                     {nodeType === 'cross_encoder_rerank' && renderCrossEncoderRerankFields()}
+                    {nodeType === 'http_request' && renderHttpRequestFields()}
 
-                    {['human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion', 'file_storage', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && renderOutputKeyField()}
+                    {['human_input', 'agentic_tool_use', 'llm_response', 'http_request', 'workflow_call', 'file_ingestion', 'file_storage', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank'].includes(nodeType) && renderOutputKeyField()}
                 </div>
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">

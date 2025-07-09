@@ -18,17 +18,17 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class VectorDbIngestionAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         """Splits text, gets embeddings, and saves to a FAISS vector store."""
         if not RAG_AVAILABLE:
             return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (faiss, langchain) are not installed."}
 
         try:
             # === Step 1: Get the input data correctly ===
-            if not step.prompt_template or not re.search(r'\{input\.([a-zA-Z0-9_]+)\}', step.prompt_template):
+            if not step.prompt_template or not re.search(r'\{input\.([a-zA-Z0-9_]+)}', step.prompt_template):
                 return {"step_id": step.step_id, "success": False, "error": "Ingestion prompt_template must contain an {input.variable_name} placeholder."}
 
-            input_variable_name = re.search(r'\{input\.([a-zA-Z0-9_]+)\}', step.prompt_template).group(1)
+            input_variable_name = re.search(r'\{input\.([a-zA-Z0-9_]+)}', step.prompt_template).group(1)
             input_data = state.get("collected_inputs", {}).get(input_variable_name)
 
             if not input_data:
@@ -69,7 +69,7 @@ class VectorDbIngestionAction(BaseActionExecutor):
 
             # === Step 4: Embed and Ingest ===
             embedding_model = step.embedding_model or "text-embedding-3-small"
-            response = self.client.embeddings.create(input=doc_contents, model=embedding_model)
+            response = await self.client.embeddings.create(input=doc_contents, model=embedding_model)
             embeddings = [item.embedding for item in response.data]
 
             dimension = len(embeddings[0])

@@ -1,12 +1,13 @@
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 
+
 @dataclass
 class WorkflowStep:
     """Represents a single, atomic step in a workflow."""
     step_id: str
     description: str
-    action_type: str # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage'
+    action_type: str  # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage', 'http_request'
     prompt_template: Optional[str] = None
     on_success: str = 'END'
     on_failure: Optional[str] = None
@@ -17,24 +18,29 @@ class WorkflowStep:
     tool_selection: str = 'auto'  # 'auto', 'manual', 'none'
     tool_names: Optional[List[str]] = field(default_factory=list)
 
-    # --- NEW: Field for 'workflow_call' ---
+    # --- Field for 'workflow_call' ---
     target_workflow_id: Optional[int] = None
 
-    # --- NEW: Fields for 'file_ingestion' ---
-    allowed_file_types: Optional[List[str]] = field(default_factory=list) # e.g., ['.pdf', '.txt']
+    # --- Fields for 'file_ingestion' ---
+    allowed_file_types: Optional[List[str]] = field(default_factory=list)  # e.g., ['.pdf', '.txt']
     max_files: int = 1
 
-    # --- NEW: Fields for RAG nodes ---
-    collection_name: Optional[str] = None      # For ingestion and query
-    embedding_model: Optional[str] = None      # For ingestion
-    chunk_size: Optional[int] = 1000           # For ingestion
-    chunk_overlap: Optional[int] = 200         # For ingestion
-    top_k: Optional[int] = 5                   # For query
-    rerank_top_n: Optional[int] = 3            # For rerank
+    # --- Fields for RAG nodes ---
+    collection_name: Optional[str] = None  # For ingestion and query
+    embedding_model: Optional[str] = None  # For ingestion
+    chunk_size: Optional[int] = 1000  # For ingestion
+    chunk_overlap: Optional[int] = 200  # For ingestion
+    top_k: Optional[int] = 5  # For query
+    rerank_top_n: Optional[int] = 3  # For rerank
 
-    # --- NEW: Field for 'file_storage' ---
-    storage_path: Optional[str] = None # e.g., 'tickets/attachments'
+    # --- Field for 'file_storage' ---
+    storage_path: Optional[str] = None  # e.g., 'tickets/attachments'
 
+    # --- Fields for 'http_request' ---
+    http_method: Optional[str] = 'GET' # e.g., GET, POST, PUT, DELETE
+    url_template: Optional[str] = None
+    headers_template: Optional[str] = None # JSON string
+    body_template: Optional[str] = None # JSON string
 
     def to_dict(self) -> Dict[str, Any]:
         # Exclude fields with default or None values for cleaner serialization, if desired.
@@ -46,6 +52,7 @@ class WorkflowStep:
         # Use dictionary unpacking for simplicity, ensures all fields are mapped.
         # This is robust to new fields being added to the dataclass.
         return cls(**data)
+
 
 @dataclass
 class Workflow:

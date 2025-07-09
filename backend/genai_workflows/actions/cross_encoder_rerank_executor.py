@@ -14,7 +14,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class CrossEncoderRerankAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         """Re-ranks retrieved documents using a cross-encoder model for better relevance."""
         if not RAG_AVAILABLE:
             return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (sentence-transformers) are not installed."}

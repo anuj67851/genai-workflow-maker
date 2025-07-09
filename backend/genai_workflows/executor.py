@@ -18,6 +18,7 @@ from .actions.vector_db_ingestion_executor import VectorDbIngestionAction
 from .actions.vector_db_query_executor import VectorDbQueryAction
 from .actions.workflow_call_executor import WorkflowCallAction
 from .actions.file_storage_executor import FileStorageAction
+from .actions.http_request_executor import HttpRequestAction
 
 
 if TYPE_CHECKING:
@@ -52,9 +53,10 @@ class WorkflowExecutor:
             "vector_db_ingestion": VectorDbIngestionAction,
             "vector_db_query": VectorDbQueryAction,
             "workflow_call": WorkflowCallAction,
+            "http_request": HttpRequestAction,
         }
 
-    def execute(self, workflow: Workflow, execution_state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, workflow: Workflow, execution_state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executes or resumes a workflow from a given state.
         This method will run until the workflow completes, fails, or pauses for input.
@@ -70,7 +72,7 @@ class WorkflowExecutor:
                     return {"status": "failed", "error": error_msg, "state": execution_state}
 
                 # --- Delegate to the appropriate action class ---
-                result = self._execute_step(step, execution_state)
+                result = await self._execute_step(step, execution_state)
 
                 # The rest of the loop logic remains the same...
                 if result.get("status") in ["awaiting_input", "awaiting_file_upload"]:
@@ -101,7 +103,7 @@ class WorkflowExecutor:
 
             if not execution_state.get("final_response"):
                 self.logger.info("Workflow ended without an explicit final response. Generating summary.")
-                execution_state["final_response"] = self._generate_final_response(execution_state)
+                execution_state["final_response"] = await self._generate_final_response(execution_state)
 
             return {
                 "status": "completed",
@@ -113,7 +115,7 @@ class WorkflowExecutor:
             return {"status": "failed", "error": str(e), "state": execution_state}
 
 
-    def _execute_step(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_step(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         This method now finds the correct action class, instantiates it, and calls its execute method.
         """
@@ -130,17 +132,17 @@ class WorkflowExecutor:
             # Create an instance of the action class, passing all necessary dependencies
             action_instance = action_class(self.client, self.tool_registry, self.engine)
             # Call its execute method
-            return action_instance.execute(step, state)
+            return await action_instance.execute(step, state)
         except Exception as e:
             self.logger.error(f"Error executing action for step '{step.step_id}': {e}", exc_info=True)
             return {"step_id": step.step_id, "success": False, "error": f"Critical error in action '{step.action_type}': {e}"}
 
 
-    def _generate_final_response(self, state: Dict[str, Any]) -> str:
+    async def _generate_final_response(self, state: Dict[str, Any]) -> str:
         """This method remains as it's a general utility for the end of a workflow."""
         prompt = f"Based on the user's query '{state.get('query')}' and the actions taken, provide a concise final summary. History: {json.dumps(state.get('step_history', []), default=str)}"
         try:
-            response = self.client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.7)
+            response = await self.client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.7)
             return response.choices[0].message.content
         except Exception as e:
             self.logger.error(f"Final response generation failed: {e}", exc_info=True)

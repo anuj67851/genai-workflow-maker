@@ -26,6 +26,7 @@ import VectorDBIngestionNode from '../components/nodes/VectorDBIngestionNode';
 import VectorDBQueryNode from '../components/nodes/VectorDBQueryNode';
 import CrossEncoderRerankNode from '../components/nodes/CrossEncoderRerankNode';
 import FileStorageNode from '../components/nodes/FileStorageNode';
+import HttpRequestNode from '../components/nodes/HttpRequestNode';
 
 
 import useWorkflowStore from '../stores/workflowStore';
@@ -44,6 +45,7 @@ const nodeTypes = {
     vector_db_ingestionNode: VectorDBIngestionNode,
     vector_db_queryNode: VectorDBQueryNode,
     cross_encoder_rerankNode: CrossEncoderRerankNode,
+    http_requestNode: HttpRequestNode,
 };
 
 const initialNodes = [
@@ -128,6 +130,13 @@ const BuilderComponent = () => {
         }
         if(type === 'cross_encoder_rerank') {
             defaultData.rerank_top_n = 3;
+        }
+        if(type === 'http_request') {
+            defaultData.http_method = 'GET';
+            defaultData.url_template = 'https://api.example.com/data';
+            defaultData.headers_template = '{\n  "Accept": "application/json"\n}';
+            defaultData.body_template = '';
+            defaultData.prompt_template = null; // Not used by this node type
         }
 
 

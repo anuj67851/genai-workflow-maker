@@ -8,7 +8,7 @@ from ..workflow import WorkflowStep
 logger = logging.getLogger(__name__)
 
 class AgenticToolUseAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         filled_prompt = self._fill_prompt_template(step.prompt_template, state)
         system_message = "You are an assistant that must achieve a goal. Analyze the user's query and the goal."
         available_tools: List[Dict[str, Any]] = []
@@ -29,7 +29,7 @@ class AgenticToolUseAction(BaseActionExecutor):
             completion_kwargs["tool_choice"] = "auto"
 
         try:
-            response = self.client.chat.completions.create(**completion_kwargs)
+            response = await self.client.chat.completions.create(**completion_kwargs)
             response_message = response.choices[0].message
 
             if response_message.tool_calls:

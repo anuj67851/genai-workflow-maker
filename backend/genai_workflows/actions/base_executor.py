@@ -19,7 +19,7 @@ class BaseActionExecutor(ABC):
         self.engine = engine
 
     @abstractmethod
-    def execute(self, step: 'WorkflowStep', state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: 'WorkflowStep', state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executes the logic for a specific workflow step.
 

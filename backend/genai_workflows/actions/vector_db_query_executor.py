@@ -16,7 +16,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class VectorDbQueryAction(BaseActionExecutor):
-    def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         """Queries a FAISS vector store to find similar documents."""
         if not RAG_AVAILABLE:
             return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (faiss) are not installed."}
@@ -50,7 +50,7 @@ class VectorDbQueryAction(BaseActionExecutor):
                 documents = json.load(f)
 
             embedding_model = step.embedding_model or "text-embedding-3-small"
-            query_embedding = self.client.embeddings.create(input=[query_text], model=embedding_model).data[0].embedding
+            query_embedding = await self.client.embeddings.create(input=[query_text], model=embedding_model).data[0].embedding
 
             top_k = step.top_k or 5
             distances, indices = index.search(np.array([query_embedding], dtype=np.float32), top_k)

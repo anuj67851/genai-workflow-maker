@@ -119,14 +119,14 @@ def delete_workflow_endpoint(workflow_id: int, eng: WorkflowEngine = Depends(get
     return {}
 
 @app.post("/api/executions/start_by_id", summary="Start a workflow by its ID")
-def start_by_id_endpoint(req: ExecutionByIdRequest, eng: WorkflowEngine = Depends(get_engine)):
-    result = eng.start_execution_by_id(req.workflow_id, req.query, req.context)
+async def start_by_id_endpoint(req: ExecutionByIdRequest, eng: WorkflowEngine = Depends(get_engine)):
+    result = await eng.start_execution_by_id(req.workflow_id, req.query, req.context)
     if result.get("status") == "failed": raise HTTPException(status_code=400, detail=result.get("error", "Execution failed"))
     return result
 
 @app.post("/api/executions/resume", summary="Resume a paused workflow with text input")
-def resume_endpoint(req: ResumeRequest, eng: WorkflowEngine = Depends(get_engine)):
-    result = eng.resume_execution(req.execution_id, req.user_input)
+async def resume_endpoint(req: ResumeRequest, eng: WorkflowEngine = Depends(get_engine)):
+    result = await eng.resume_execution(req.execution_id, req.user_input)
     if result.get("status") == "failed": raise HTTPException(status_code=400, detail=result.get("error", "Resume failed"))
     return result
 

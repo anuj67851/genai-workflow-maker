@@ -10,7 +10,8 @@ import {
     CircleStackIcon,
     MagnifyingGlassIcon,
     ArrowsUpDownIcon,
-    ArchiveBoxIcon
+    ArchiveBoxIcon,
+    ServerStackIcon,
 } from '@heroicons/react/24/outline';
 import useWorkflowStore from '../../stores/workflowStore';
 
@@ -35,6 +36,7 @@ const Sidebar = () => {
         { type: 'vector_db_ingestion', label: 'Vector Ingestion', icon: <CircleStackIcon className="h-6 w-6 text-teal-700" /> },
         { type: 'vector_db_query', label: 'Vector Query', icon: <MagnifyingGlassIcon className="h-6 w-6 text-teal-700" /> },
         { type: 'cross_encoder_rerank', label: 'Rerank Results', icon: <ArrowsUpDownIcon className="h-6 w-6 text-teal-700" /> },
+        { type: 'http_request', label: 'API Request', icon: <ServerStackIcon className="h-6 w-6 text-slate-700" /> },
     ];
 
     const handleSaveWorkflow = async () => {
