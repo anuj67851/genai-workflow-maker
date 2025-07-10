@@ -124,7 +124,7 @@ class WorkflowEngine:
                 return {"status": "failed", "error": error_msg}
 
         elif paused_step.action_type == 'file_storage':
-            # --- NEW: Save and Reference Logic ---
+            # --- Save and Reference Logic ---
             self.logger.info("Handling as 'file_storage': Saving files and returning paths.")
             base_storage_dir = "file_attachments"
             # Use a subdirectory specified in the node, or a default
