@@ -14,10 +14,6 @@ from .genai_workflows import WorkflowEngine, Workflow, WorkflowStep
 # Load environment variables from a .env file
 load_dotenv()
 
-# --- Configuration ---
-UPLOAD_DIRECTORY = "./uploaded_files"
-os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
-
 # --- Lifespan Management ---
 # This is the modern way to handle startup/shutdown logic.
 @asynccontextmanager

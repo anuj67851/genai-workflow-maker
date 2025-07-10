@@ -50,7 +50,7 @@ class VectorDbQueryAction(BaseActionExecutor):
                 documents = json.load(f)
 
             embedding_model = step.embedding_model or "text-embedding-3-small"
-            query_embedding = await self.client.embeddings.create(input=[query_text], model=embedding_model).data[0].embedding
+            query_embedding = (await self.client.embeddings.create(input=[query_text], model=embedding_model)).data[0].embedding
 
             top_k = step.top_k or 5
             distances, indices = index.search(np.array([query_embedding], dtype=np.float32), top_k)
