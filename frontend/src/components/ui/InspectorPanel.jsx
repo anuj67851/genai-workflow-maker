@@ -67,6 +67,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     }, [fetchTools, tools.length]);
 
     // A single, unified handler to update the node data in the store.
+    // This handler works for both onChange and onBlur events
     const handleChange = (event) => {
         if (!selectedNode) return;
         const { name, value, type, checked } = event.target;
@@ -83,8 +84,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             finalValue = value;
         }
 
-        const newData = { ...nodeData, [name]: finalValue };
-        updateNodeData(selectedNode.id, newData);
+        // Only update if the value has actually changed
+        if (JSON.stringify(nodeData[name]) !== JSON.stringify(finalValue)) {
+            const newData = { ...nodeData, [name]: finalValue };
+            updateNodeData(selectedNode.id, newData);
+        }
     };
 
     // Handler for the delete button. It calls the store's change handlers.
@@ -111,11 +115,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         <>
             <div>
                 <label htmlFor="label">Node Label (Optional)</label>
-                <input id="label" name="label" value={nodeData.label || ''} onChange={handleChange} placeholder="e.g., Check User Warranty"/>
+                <input id="label" name="label" defaultValue={nodeData.label || ''} onBlur={handleChange} placeholder="e.g., Check User Warranty"/>
             </div>
             <div>
                 <label htmlFor="description">Description</label>
-                <input id="description" name="description" value={nodeData.description || ''} onChange={handleChange} placeholder="A brief summary of this step"/>
+                <input id="description" name="description" defaultValue={nodeData.description || ''} onBlur={handleChange} placeholder="A brief summary of this step"/>
             </div>
         </>
     );
@@ -123,7 +127,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderPromptTemplateField = () => (
         <div>
             <label htmlFor="prompt_template">Prompt / Instruction</label>
-            <textarea id="prompt_template" name="prompt_template" rows={5} value={nodeData.prompt_template || ''} onChange={handleChange} placeholder="The detailed instruction for the LLM or user."/>
+            <textarea id="prompt_template" name="prompt_template" rows={5} defaultValue={nodeData.prompt_template || ''} onBlur={handleChange} placeholder="The detailed instruction for the LLM or user."/>
             <p className="text-xs text-gray-400 mt-1">You can use variables like {`{query}`} or {`{input.variable_name}`}.</p>
         </div>
     );
@@ -131,7 +135,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderDataSourceField = () => (
         <div>
             <label htmlFor="prompt_template">Input Variable / Data Source</label>
-            <input id="prompt_template" name="prompt_template" value={nodeData.prompt_template || ''} onChange={handleChange} placeholder="{input.variable_name}" />
+            <input id="prompt_template" name="prompt_template" defaultValue={nodeData.prompt_template || ''} onBlur={handleChange} placeholder="{input.variable_name}" />
             <p className="text-xs text-gray-400 mt-1">Specify the variable holding the data for this step (e.g., from a file upload or previous step).</p>
         </div>
     );
@@ -139,7 +143,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     const renderOutputKeyField = () => (
         <div>
             <label htmlFor="output_key">Output Variable Name</label>
-            <input id="output_key" name="output_key" value={nodeData.output_key || ''} onChange={handleChange} placeholder="e.g., user_email, ticket_id" />
+            <input id="output_key" name="output_key" defaultValue={nodeData.output_key || ''} onBlur={handleChange} placeholder="e.g., user_email, ticket_id" />
             <p className="text-xs text-gray-400 mt-1">Saves the step's result to this variable for later use.</p>
         </div>
     );
@@ -212,7 +216,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             </div>
             <div>
                 <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
-                <input id="allowed_file_types" name="allowed_file_types" value={(nodeData.allowed_file_types || []).join(', ')} onChange={handleChange} placeholder=".pdf, .txt, .csv" />
+                <input id="allowed_file_types" name="allowed_file_types" defaultValue={(nodeData.allowed_file_types || []).join(', ')} onBlur={handleChange} placeholder=".pdf, .txt, .csv" />
                 <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
             </div>
         </div>
@@ -222,7 +226,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         <div className="space-y-4">
             <div>
                 <label htmlFor="storage_path">Storage Subdirectory (Optional)</label>
-                <input id="storage_path" name="storage_path" value={nodeData.storage_path || ''} onChange={handleChange} placeholder="e.g., ticket_attachments" />
+                <input id="storage_path" name="storage_path" defaultValue={nodeData.storage_path || ''} onBlur={handleChange} placeholder="e.g., ticket_attachments" />
                 <p className="text-xs text-gray-400 mt-1">A subdirectory within the main attachments folder to save this file to.</p>
             </div>
             <div>
@@ -231,7 +235,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             </div>
             <div>
                 <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
-                <input id="allowed_file_types" name="allowed_file_types" value={(nodeData.allowed_file_types || []).join(', ')} onChange={handleChange} placeholder=".png, .jpg, .pdf" />
+                <input id="allowed_file_types" name="allowed_file_types" defaultValue={(nodeData.allowed_file_types || []).join(', ')} onBlur={handleChange} placeholder=".png, .jpg, .pdf" />
                 <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
             </div>
         </div>
@@ -242,11 +246,11 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             <h4 className="font-bold text-teal-800">Vector Ingestion Settings</h4>
             <div>
                 <label htmlFor="collection_name">Collection Name</label>
-                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
+                <input id="collection_name" name="collection_name" defaultValue={nodeData.collection_name || ''} onBlur={handleChange} placeholder="e.g., project_docs_v1"/>
             </div>
             <div>
                 <label htmlFor="embedding_model">Embedding Model</label>
-                <input id="embedding_model" name="embedding_model" value={nodeData.embedding_model || ''} onChange={handleChange} placeholder="text-embedding-3-small"/>
+                <input id="embedding_model" name="embedding_model" defaultValue={nodeData.embedding_model || ''} onBlur={handleChange} placeholder="text-embedding-3-small"/>
             </div>
             <div>
                 <label htmlFor="chunk_size">Chunk Size</label>
@@ -264,7 +268,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             <h4 className="font-bold text-teal-800">Vector Query Settings</h4>
             <div>
                 <label htmlFor="collection_name">Collection Name</label>
-                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
+                <input id="collection_name" name="collection_name" defaultValue={nodeData.collection_name || ''} onBlur={handleChange} placeholder="e.g., project_docs_v1"/>
             </div>
             <div>
                 <label htmlFor="top_k">Top-K</label>
@@ -300,17 +304,17 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
             </div>
             <div>
                 <label htmlFor="url_template">Request URL</label>
-                <input id="url_template" name="url_template" value={nodeData.url_template || ''} onChange={handleChange} placeholder="https://api.example.com/items/{input.item_id}" />
+                <input id="url_template" name="url_template" defaultValue={nodeData.url_template || ''} onBlur={handleChange} placeholder="https://api.example.com/items/{input.item_id}" />
                 <p className="text-xs text-gray-400 mt-1">You can use variables like {`{input.var_name}`}.</p>
             </div>
             <div>
                 <label htmlFor="headers_template">Headers (JSON format)</label>
-                <textarea id="headers_template" name="headers_template" rows={4} value={nodeData.headers_template || ''} onChange={handleChange} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
+                <textarea id="headers_template" name="headers_template" rows={4} defaultValue={nodeData.headers_template || ''} onBlur={handleChange} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
             </div>
             {['POST', 'PUT', 'PATCH'].includes(nodeData.http_method?.toUpperCase()) && (
                 <div>
                     <label htmlFor="body_template">Body (JSON format)</label>
-                    <textarea id="body_template" name="body_template" rows={5} value={nodeData.body_template || ''} onChange={handleChange} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
+                    <textarea id="body_template" name="body_template" rows={5} defaultValue={nodeData.body_template || ''} onBlur={handleChange} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
                 </div>
             )}
         </div>

@@ -51,7 +51,7 @@ const useWorkflowStore = create((set, get) => ({
         const newEdge = {
             ...connection,
             id: `edge-${connection.source}-${connection.target}-${connection.sourceHandle || 'default'}`,
-            type: 'smoothstep',
+            // type: 'smoothstep',
         };
         set({
             edges: addEdge(newEdge, get().edges),
@@ -157,6 +157,11 @@ const useWorkflowStore = create((set, get) => ({
             const outgoingEdges = edgesBySource[node.id] || [];
             node.data.on_success = null;
             node.data.on_failure = null;
+
+            // Remove _version parameter as it's only used in frontend
+            if (node.data._version !== undefined) {
+                delete node.data._version;
+            }
 
             if (node.data.action_type === 'condition_check') {
                 const successEdge = outgoingEdges.find(e => e.sourceHandle === 'onSuccess');

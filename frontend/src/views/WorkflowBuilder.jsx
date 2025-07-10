@@ -191,7 +191,7 @@ const BuilderComponent = () => {
                     <Background variant="dots" gap={12} size={1} />
                 </ReactFlow>
             </div>
-            <InspectorPanel selection={selection} currentWorkflowId={workflowId} />
+            <InspectorPanel key={selection?.nodes[0]?.id || 'no-selection'} selection={selection} currentWorkflowId={workflowId} />
         </div>
     );
 };
