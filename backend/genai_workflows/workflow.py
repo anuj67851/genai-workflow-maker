@@ -33,6 +33,9 @@ class WorkflowStep:
     top_k: Optional[int] = 5  # For query
     rerank_top_n: Optional[int] = 3  # For rerank
 
+    # --- Field for LLM model selection ---
+    model_name: Optional[str] = None  # For LLM-based actions
+
     # --- Field for 'file_storage' ---
     storage_path: Optional[str] = None  # e.g., 'tickets/attachments'
 

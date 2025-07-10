@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from typing import Dict, Any, TYPE_CHECKING
 
 from .workflow import Workflow, WorkflowStep
@@ -40,7 +39,6 @@ class WorkflowExecutor:
         self.storage = storage
         self.engine = engine # The engine itself, needed for sub-workflow calls
         self.logger = logging.getLogger(__name__)
-        os.makedirs("vector_stores", exist_ok=True)
 
         # --- The action registry maps action_type strings to their handler classes ---
         self.action_executors = {
@@ -149,7 +147,17 @@ class WorkflowExecutor:
         """This method remains as it's a general utility for the end of a workflow."""
         prompt = f"Based on the user's query '{state.get('query')}' and the actions taken, provide a concise final summary. History: {json.dumps(state.get('step_history', []), default=str)}"
         try:
-            response = await self.client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.7)
+            # Use a default model or get it from configuration
+            default_model = "gpt-4o-mini"
+            # Check if there's a default model configured in the engine
+            if hasattr(self.engine, 'default_model') and self.engine.default_model:
+                default_model = self.engine.default_model
+
+            response = await self.client.chat.completions.create(
+                model=default_model, 
+                messages=[{"role": "user", "content": prompt}], 
+                temperature=0.7
+            )
             return response.choices[0].message.content
         except Exception as e:
             self.logger.error(f"Final response generation failed: {e}", exc_info=True)

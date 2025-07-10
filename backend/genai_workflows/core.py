@@ -24,7 +24,7 @@ class WorkflowEngine:
     Orchestrates creation, execution, visualization, and state management.
     """
 
-    def __init__(self, openai_api_key: str, db_path: str = "workflows.db"):
+    def __init__(self, openai_api_key: str, db_path: str = "workflows.db", default_model: str = "gpt-4o-mini"):
         """Initializes all components of the workflow system."""
         self.client = openai.AsyncOpenAI(api_key=openai_api_key)
         self.storage = WorkflowStorage(db_path)
@@ -35,7 +35,14 @@ class WorkflowEngine:
         self.visualizer = WorkflowVisualizer()
         self.interactive_parser = InteractiveWorkflowParser(self.client, self.tool_registry)
 
+        # Default model to use for LLM operations if not specified in the step
+        self.default_model = default_model
+
         self.logger = logging.getLogger(__name__)
+
+        # Ensure required directories exist
+        os.makedirs("vector_stores", exist_ok=True)
+        os.makedirs("file_attachments", exist_ok=True)
 
         tools.register_all_tools(self.tool_registry)
         self.logger.info(f"Registered {len(self.tool_registry.list_tools())} tools.")
@@ -61,11 +68,60 @@ class WorkflowEngine:
         final_output = []
 
         if paused_step.action_type == 'file_ingestion':
-            # --- Text Extraction Logic (as before) ---
+            # --- Text Extraction Logic ---
             self.logger.info("Handling as 'file_ingestion': Extracting text content.")
-            # ... (the text extraction logic using pytesseract, PyPDF2, etc. remains here) ...
-            # For brevity, let's assume this logic correctly populates `final_output` with strings.
-            # Example: final_output = ["text from file1", "text from file2"]
+
+            try:
+                # Import necessary libraries for text extraction
+                import PyPDF2
+                from PIL import Image
+                import pytesseract
+                import docx
+
+                for file in files:
+                    file_content = await file.read()
+                    file_extension = os.path.splitext(file.filename)[1].lower()
+
+                    if file_extension == '.pdf':
+                        # Extract text from PDF
+                        import io
+                        pdf_file = io.BytesIO(file_content)
+                        pdf_reader = PyPDF2.PdfReader(pdf_file)
+                        text = ""
+                        for page_num in range(len(pdf_reader.pages)):
+                            text += pdf_reader.pages[page_num].extract_text()
+                        final_output.append(text)
+
+                    elif file_extension in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']:
+                        # Extract text from image using OCR
+                        import io
+                        image = Image.open(io.BytesIO(file_content))
+                        text = pytesseract.image_to_string(image)
+                        final_output.append(text)
+
+                    elif file_extension == '.docx':
+                        # Extract text from Word document
+                        import io
+                        doc = docx.Document(io.BytesIO(file_content))
+                        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                        final_output.append(text)
+
+                    elif file_extension == '.txt':
+                        # Extract text from plain text file
+                        text = file_content.decode('utf-8')
+                        final_output.append(text)
+
+                    else:
+                        # For unsupported file types, add a placeholder
+                        final_output.append(f"[Unsupported file type: {file_extension}]")
+
+                if not final_output:
+                    return {"status": "failed", "error": "No text could be extracted from the uploaded files."}
+
+            except Exception as e:
+                error_msg = f"Text extraction failed: {e}"
+                self.logger.error(error_msg, exc_info=True)
+                return {"status": "failed", "error": error_msg}
 
         elif paused_step.action_type == 'file_storage':
             # --- NEW: Save and Reference Logic ---

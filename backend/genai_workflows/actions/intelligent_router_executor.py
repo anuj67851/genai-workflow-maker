@@ -49,8 +49,14 @@ Respond with ONLY the name of your chosen option from the list.
         ]
 
         try:
+            # Use the model specified in the step, or fall back to a default
+            model = step.model_name or "gpt-4o-mini"
+            # If engine has a default model, use that as fallback instead
+            if not step.model_name and hasattr(self.engine, 'default_model') and self.engine.default_model:
+                model = self.engine.default_model
+
             response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model,
                 messages=messages,
                 temperature=0.0,
             )
