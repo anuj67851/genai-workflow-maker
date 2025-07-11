@@ -4,10 +4,24 @@ import { PlayCircleIcon, PlusCircleIcon, Cog8ToothIcon } from '@heroicons/react/
 
 import WorkflowBuilder from './views/WorkflowBuilder';
 import WorkflowExecutor from './views/WorkflowExecutor';
+import axios from "axios";
+import {ArrowPathIcon} from "@heroicons/react/24/solid";
 
 function App() {
     const activeLinkClass = "bg-indigo-700 text-white";
     const inactiveLinkClass = "text-indigo-100 hover:bg-indigo-700 hover:text-white";
+    const buttonClass = `${inactiveLinkClass} px-3 py-2 rounded-md text-sm font-medium flex items-center cursor-pointer`;
+
+    // Handler function for the new button
+    const handleRescanTools = async () => {
+        try {
+            const response = await axios.post('/api/tools/rescan');
+            alert(response.data.message || 'Tools rescanned successfully!');
+        } catch (error) {
+            const errorMsg = error.response?.data?.detail || 'An unknown error occurred.';
+            alert(`Failed to rescan tools: ${errorMsg}`);
+        }
+    };
 
     return (
         <div className="flex flex-col h-screen bg-white">
@@ -27,6 +41,10 @@ function App() {
                                 <PlayCircleIcon className="h-5 w-5 mr-2" />
                                 Run Workflows
                             </NavLink>
+                            <button onClick={handleRescanTools} className={buttonClass}>
+                                <ArrowPathIcon className="h-5 w-5 mr-2" />
+                                Rescan Tools
+                            </button>
                         </div>
                     </div>
                 </nav>

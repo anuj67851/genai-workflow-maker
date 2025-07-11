@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Dict, Any, List, Optional
 from .workflow import Workflow, WorkflowStep
-from .tools import ToolRegistry
+from ..tools.registry import ToolRegistry
 
 class InteractiveWorkflowParser:
     """
@@ -126,6 +126,8 @@ class InteractiveWorkflowParser:
 
     def _get_system_prompt(self) -> str:
         """Constructs the master system prompt for the interactive builder LLM."""
+        # --- MODIFIED: Get tools directly from the new registry ---
+        # The list_tools() method now returns the correct OpenAI format.
         available_tools = self.tool_registry.list_tools()
         tools_json_str = json.dumps(available_tools, indent=2)
 

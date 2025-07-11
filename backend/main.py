@@ -133,9 +133,39 @@ async def resume_with_file_endpoint(
 ):
     return await eng.resume_execution_with_files(execution_id, files)
 
-@app.get("/api/tools", summary="List all available tools")
-def list_tools_endpoint(eng: WorkflowEngine = Depends(get_engine)):
-    return eng.tool_registry.list_tools()
+@app.get("/api/tools", tags=["Tools"])
+def get_available_tools(eng: WorkflowEngine = Depends(get_engine)):
+    """
+    Returns a list of all currently loaded and available tools with their schemas.
+    This is used by the frontend to populate the node inspector.
+    """
+    try:
+        # The list_tools() method on our new registry already returns the
+        # exact format the frontend will need.
+        return eng.tool_registry.list_tools()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while fetching tools: {e}"
+        )
+
+@app.post("/api/tools/rescan", tags=["Tools"])
+def rescan_tools(eng: WorkflowEngine = Depends(get_engine)):
+    """
+    Triggers a dynamic rescan of the tool directories (`builtin` and `custom`).
+    This allows for hot-reloading new or updated tools without restarting the server.
+    """
+    try:
+        # This calls the method we created in the WorkflowEngine
+        result = eng.rescan_and_load_tools()
+        return result
+    except Exception as e:
+        # Log the exception for debugging
+        logging.error(f"Failed during tool rescan: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred during tool rescanning: {e}"
+        )
 
 # --- Static Files Mounting (with conditional check) ---
 class SPAStaticFiles(StaticFiles):

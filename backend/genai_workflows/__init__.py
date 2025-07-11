@@ -12,7 +12,6 @@ logging.basicConfig(
 
 from .core import WorkflowEngine
 from .workflow import Workflow, WorkflowStep
-from .tools import ToolRegistry
 from .storage import WorkflowStorage
 from .router import WorkflowRouter
 from .executor import WorkflowExecutor
@@ -33,6 +32,5 @@ __all__ = [
     "WorkflowExecutor",
     "WorkflowVisualizer",
     "WorkflowStorage",
-    "ToolRegistry",
     "WorkflowRouter",
 ]

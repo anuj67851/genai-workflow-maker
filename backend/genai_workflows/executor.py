@@ -4,7 +4,6 @@ from typing import Dict, Any, TYPE_CHECKING
 
 from .workflow import Workflow, WorkflowStep
 from .storage import WorkflowStorage
-from .tools import ToolRegistry
 
 # --- Import all the individual action classes ---
 from .actions.agentic_tool_use_executor import AgenticToolUseAction
@@ -19,7 +18,7 @@ from .actions.workflow_call_executor import WorkflowCallAction
 from .actions.file_storage_executor import FileStorageAction
 from .actions.http_request_executor import HttpRequestAction
 from .actions.intelligent_router_executor import IntelligentRouterAction
-
+from ..tools import ToolRegistry
 
 if TYPE_CHECKING:
     from .core import WorkflowEngine

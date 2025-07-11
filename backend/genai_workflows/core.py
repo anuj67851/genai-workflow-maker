@@ -10,12 +10,11 @@ from fastapi import UploadFile
 
 from .workflow import Workflow
 from .storage import WorkflowStorage
-from .tools import ToolRegistry
+from ..tools.registry import ToolRegistry
 from .router import WorkflowRouter
 from .executor import WorkflowExecutor
 from .visualization import WorkflowVisualizer
 from .interactive_parser import InteractiveWorkflowParser
-from .. import tools
 
 
 class WorkflowEngine:
@@ -28,7 +27,17 @@ class WorkflowEngine:
         """Initializes all components of the workflow system."""
         self.client = openai.AsyncOpenAI(api_key=openai_api_key)
         self.storage = WorkflowStorage(db_path)
-        self.tool_registry = ToolRegistry()
+
+        # Define the directories where your tools are located.
+        # The system will automatically scan these for functions with @tool.
+        tool_dirs = [
+            os.path.join(os.path.dirname(__file__), '..', 'tools', 'builtin'),
+            os.path.join(os.path.dirname(__file__), '..', 'tools', 'custom')
+        ]
+        # Ensure custom tools directory exists
+        os.makedirs(tool_dirs[1], exist_ok=True)
+        self.tool_registry = ToolRegistry(tool_dirs=tool_dirs)
+
         self.router = WorkflowRouter(self.client)
         # Pass storage and self (engine) to executor for sub-workflow calls
         self.executor = WorkflowExecutor(self.client, self.tool_registry, self.storage, self)
@@ -40,12 +49,21 @@ class WorkflowEngine:
 
         self.logger = logging.getLogger(__name__)
 
-        # Ensure required directories exist
+        # Ensure other required directories exist
         os.makedirs("vector_stores", exist_ok=True)
         os.makedirs("file_attachments", exist_ok=True)
 
-        tools.register_all_tools(self.tool_registry)
-        self.logger.info(f"Registered {len(self.tool_registry.list_tools())} tools.")
+    def rescan_and_load_tools(self) -> Dict[str, Any]:
+        """
+        Triggers a dynamic rescan of the tool directories to find new or
+        updated tools without restarting the server.
+
+        Returns:
+            A dictionary with the count of loaded tools.
+        """
+        self.logger.info("API call received to rescan and reload tools.")
+        count = self.tool_registry.rescan_tools()
+        return {"status": "success", "message": f"Successfully rescanned directories. {count} tools are now available."}
 
     async def resume_execution_with_files(self, execution_id: str, files: List[UploadFile]) -> Dict[str, Any]:
         """
@@ -324,7 +342,3 @@ class WorkflowEngine:
     def delete_workflow(self, workflow_id: int) -> bool:
         """Deletes a workflow and all associated paused states from the database."""
         return self.storage.delete_workflow(workflow_id)
-
-    def register_tool(self, func: callable, name: str = None):
-        """Registers a custom Python function as a tool the LLM can use."""
-        self.tool_registry.register(func, name)
