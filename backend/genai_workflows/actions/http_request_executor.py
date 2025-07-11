@@ -16,61 +16,48 @@ class HttpRequestAction(BaseActionExecutor):
         Performs the HTTP request and handles success and failure cases.
         This executor is async-native.
         """
-        # --- 1. Configuration Validation ---
         if not step.http_method or not step.url_template:
             return {"step_id": step.step_id, "success": False, "error": "HTTP Request node is missing 'http_method' or 'url_template'."}
 
-        # --- 2. Fill Templates with Workflow State ---
-        # The base `_fill_prompt_template` is perfect for simple string replacement.
         try:
+            # URL is a simple string, so _fill_prompt_template is appropriate.
             url = self._fill_prompt_template(step.url_template, state)
-            headers_str = self._fill_prompt_template(step.headers_template, state)
-            body_str = self._fill_prompt_template(step.body_template, state)
-        except Exception as e:
-            # Catch errors during template filling itself
-            error_msg = f"Failed to fill templates for HTTP request: {e}"
-            logger.error(f"Step '{step.step_id}': {error_msg}", exc_info=True)
-            return {"step_id": step.step_id, "success": False, "error": error_msg}
 
+            # Headers and Body are JSON structures, so use the robust _fill_json_template.
+            headers = self._fill_json_template(step.headers_template, state) if step.headers_template else {}
+            body = self._fill_json_template(step.body_template, state) if step.body_template else None
 
-        # --- 3. Parse JSON and Prepare Request ---
-        try:
-            headers = json.loads(headers_str) if headers_str else {}
             # Ensure headers are strings
             headers = {str(k): str(v) for k, v in headers.items()}
 
-            body = json.loads(body_str) if body_str else None
-
-            # Ensure content-type is set for POST/PUT if body exists
             if body and 'content-type' not in (h.lower() for h in headers.keys()):
                 headers['Content-Type'] = 'application/json'
 
         except json.JSONDecodeError as e:
-            error_msg = f"Failed to parse Headers or Body as JSON: {e}"
+            error_msg = f"Invalid JSON structure in Headers or Body template: {e}"
             logger.error(f"Step '{step.step_id}': {error_msg}")
+            return {"step_id": step.step_id, "success": False, "error": error_msg}
+        except Exception as e:
+            error_msg = f"Failed to prepare templates for HTTP request: {e}"
+            logger.error(f"Step '{step.step_id}': {error_msg}", exc_info=True)
             return {"step_id": step.step_id, "success": False, "error": error_msg}
 
         logger.info(f"Executing HTTP {step.http_method.upper()} request to {url}")
 
-        # --- 4. Execute the Request and Handle Errors ---
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method=step.http_method.upper(),
                     url=url,
                     headers=headers,
-                    json=body, # httpx handles the serialization for json body
-                    timeout=30.0 # A sensible default timeout
+                    json=body,
+                    timeout=30.0
                 )
-
-                # This is a key error handling step. It will raise an exception for 4xx and 5xx responses.
                 response.raise_for_status()
 
-                # --- 5. Process Successful Response ---
                 try:
                     response_body = response.json()
                 except json.JSONDecodeError:
-                    # If response is not JSON, return it as raw text
                     response_body = response.text
 
                 output = {
@@ -78,27 +65,20 @@ class HttpRequestAction(BaseActionExecutor):
                     "headers": dict(response.headers),
                     "body": response_body
                 }
-
                 return {"step_id": step.step_id, "success": True, "type": "http_request", "output": output}
 
         except httpx.HTTPStatusError as e:
-            # Catches 4xx and 5xx errors
-            # Safely try to get response text, but handle cases where it might not exist
             response_text = ""
-            try:
-                response_text = e.response.text
-            except Exception:
-                response_text = "(Could not retrieve error response body)"
+            try: response_text = e.response.text
+            except Exception: response_text = "(Could not retrieve error response body)"
             error_msg = f"API returned an error: {e.response.status_code} {e.response.reason_phrase}. Response: {response_text}"
             logger.error(f"Step '{step.step_id}': {error_msg}")
             return {"step_id": step.step_id, "success": False, "error": error_msg}
         except httpx.RequestError as e:
-            # Catches network errors, DNS issues, timeouts, etc.
             error_msg = f"Network request failed: {e.__class__.__name__} - {e}"
             logger.error(f"Step '{step.step_id}': {error_msg}")
             return {"step_id": step.step_id, "success": False, "error": error_msg}
         except Exception as e:
-            # Catch-all for any other unexpected errors
             error_msg = f"An unexpected error occurred during the HTTP request: {e}"
             logger.error(f"Step '{step.step_id}': {error_msg}", exc_info=True)
             return {"step_id": step.step_id, "success": False, "error": error_msg}

@@ -42,4 +42,21 @@ const VectorDBQueryNode = ({ data, selected }) => {
     );
 };
 
+export const VectorDBQueryNodeInspector = ({ nodeData, handleChange, handleBlur }) => {
+    return (
+        <div className="space-y-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+            <h4 className="font-bold text-teal-800">Vector Query Settings</h4>
+            <div>
+                <label htmlFor="collection_name">Collection Name</label>
+                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
+            </div>
+            <div>
+                <label htmlFor="top_k">Top-K</label>
+                <input id="top_k" name="top_k" type="number" min="1" value={nodeData.top_k ?? 5} onChange={handleChange} onBlur={handleBlur} />
+                <p className="text-xs text-gray-400 mt-1">The number of initial documents to retrieve.</p>
+            </div>
+        </div>
+    );
+};
+
 export default VectorDBQueryNode;

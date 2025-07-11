@@ -42,4 +42,28 @@ const VectorDBIngestionNode = ({ data, selected }) => {
     );
 };
 
+export const VectorDBIngestionNodeInspector = ({ nodeData, handleChange }) => {
+    return (
+        <div className="space-y-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+            <h4 className="font-bold text-teal-800">Vector Ingestion Settings</h4>
+            <div>
+                <label htmlFor="collection_name">Collection Name</label>
+                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
+            </div>
+            <div>
+                <label htmlFor="embedding_model">Embedding Model</label>
+                <input id="embedding_model" name="embedding_model" value={nodeData.embedding_model || ''} onChange={handleChange} placeholder="text-embedding-3-small"/>
+            </div>
+            <div>
+                <label htmlFor="chunk_size">Chunk Size</label>
+                <input id="chunk_size" name="chunk_size" type="number" min="1" value={nodeData.chunk_size ?? 1000} onChange={handleChange} />
+            </div>
+            <div>
+                <label htmlFor="chunk_overlap">Chunk Overlap</label>
+                <input id="chunk_overlap" name="chunk_overlap" type="number" min="0" value={nodeData.chunk_overlap ?? 200} onChange={handleChange} />
+            </div>
+        </div>
+    );
+};
+
 export default VectorDBIngestionNode;

@@ -1,10 +1,13 @@
 import os
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
+from datetime import datetime
+
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -166,6 +169,61 @@ def rescan_tools(eng: WorkflowEngine = Depends(get_engine)):
             status_code=500,
             detail=f"An internal error occurred during tool rescanning: {e}"
         )
+
+# --- NEW: Pydantic models for the Mock Email API ---
+class EmailRecipient(BaseModel):
+    email: str
+class Personalization(BaseModel):
+    to: List[EmailRecipient]
+class FromEmail(BaseModel):
+    email: str
+class Content(BaseModel):
+    type: str
+    value: str
+class MockEmailRequest(BaseModel):
+    personalizations: List[Personalization]
+    from_email: FromEmail = Field(..., alias='from') # Use alias since 'from' is a reserved keyword
+    subject: str
+    content: List[Content]
+
+
+@app.post("/api/mock/send_email", tags=["Mocks"], summary="Mock Email Sending Service")
+async def send_mock_email(req: MockEmailRequest):
+    try:
+        os.makedirs("sent_emails", exist_ok=True)
+        logging.info("Ensured 'sent_emails' directory exists.")
+
+        subject = req.subject
+        body = req.content[0].value if req.content else ""
+        recipient = req.personalizations[0].to[0].email if req.personalizations and req.personalizations[0].to else "unknown_recipient"
+        sender = req.from_email.email
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_recipient = re.sub(r'[\\/*?:"<>|]', "_", recipient)
+        filename = f"{timestamp}_{safe_recipient}.txt"
+        file_path = os.path.join("sent_emails", filename)
+
+        email_content = (
+            f"To: {recipient}\n"
+            f"From: {sender}\n"
+            f"Subject: {subject}\n"
+            f"--- BODY ---\n"
+            f"{body}"
+        )
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(email_content)
+
+        logging.info(f"Mock email saved to {file_path}")
+
+        return {
+            "status": "success",
+            "message": f"Email successfully queued and saved to {filename}",
+            "data_received": req.model_dump(by_alias=True)
+        }
+    except Exception as e:
+        logging.error(f"Mock email endpoint failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process mock email: {e}")
 
 # --- Static Files Mounting (with conditional check) ---
 class SPAStaticFiles(StaticFiles):

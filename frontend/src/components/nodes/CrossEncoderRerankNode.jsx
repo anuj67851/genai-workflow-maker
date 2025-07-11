@@ -35,4 +35,17 @@ const CrossEncoderRerankNode = ({ data, selected }) => {
     );
 };
 
+export const CrossEncoderRerankNodeInspector = ({ nodeData, handleChange, handleBlur }) => {
+    return (
+        <div className="space-y-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+            <h4 className="font-bold text-teal-800">Re-Ranker Settings</h4>
+            <div>
+                <label htmlFor="rerank_top_n">Return Top-N</label>
+                <input id="rerank_top_n" name="rerank_top_n" type="number" min="1" value={nodeData.rerank_top_n ?? 3} onChange={handleChange} onBlur={handleBlur} />
+                <p className="text-xs text-gray-400 mt-1">The final number of documents to return after re-ranking.</p>
+            </div>
+        </div>
+    );
+};
+
 export default CrossEncoderRerankNode;

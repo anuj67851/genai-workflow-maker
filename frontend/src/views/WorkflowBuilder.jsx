@@ -119,6 +119,7 @@ const BuilderComponent = () => {
         }
         if(type === 'workflow_call') {
             defaultData.prompt_template = null; // Not needed for workflow_call
+            defaultData.input_mappings = '{\n  "key_for_child": "{input.key_from_parent}"\n}';
         }
         if(type === 'vector_db_ingestion') {
             defaultData.collection_name = 'my_collection';

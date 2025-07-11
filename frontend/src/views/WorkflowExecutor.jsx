@@ -214,7 +214,9 @@ const WorkflowExecutor = () => {
             <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex my-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-lg max-w-lg whitespace-pre-wrap ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-800'}`}>{msg.content}</div>
+                        <div className={`p-3 rounded-lg max-w-lg whitespace-pre-wrap ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                            {msg.content}
+                        </div>
                     </div>
                 ))}
                 {isLoading && ( <div className="flex justify-start my-4"><div className="p-3 rounded-lg bg-gray-200 text-gray-800"><div className="flex items-center gap-2"><div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div><div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse [animation-delay:0.2s]"></div><div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse [animation-delay:0.4s]"></div></div></div></div> )}

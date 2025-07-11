@@ -20,6 +20,7 @@ class WorkflowStep:
 
     # --- Field for 'workflow_call' ---
     target_workflow_id: Optional[int] = None
+    input_mappings: Optional[str] = None # A JSON string template. E.g., '{"child_key": "{input.parent_key}"}'
 
     # --- Fields for 'file_ingestion' ---
     allowed_file_types: Optional[List[str]] = field(default_factory=list)  # e.g., ['.pdf', '.txt']

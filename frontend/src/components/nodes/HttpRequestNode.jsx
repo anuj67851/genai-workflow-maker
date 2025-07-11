@@ -51,4 +51,38 @@ const HttpRequestNode = ({ data, selected }) => {
     );
 };
 
+export const HttpRequestNodeInspector = ({ nodeData, handleChange }) => {
+    return (
+        <div className="space-y-4 p-4 bg-slate-50 border border-slate-300 rounded-lg">
+            <h4 className="font-bold text-slate-800">API Request Configuration</h4>
+            <div>
+                <label htmlFor="http_method">HTTP Method</label>
+                <select id="http_method" name="http_method" value={nodeData.http_method || 'GET'} onChange={handleChange}>
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="PATCH">PATCH</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div>
+                <label htmlFor="url_template">Request URL</label>
+                <input id="url_template" name="url_template" value={nodeData.url_template || ''} onChange={handleChange} placeholder="https://api.example.com/items/{input.item_id}" />
+                <p className="text-xs text-gray-400 mt-1">You can use variables like {`{input.var_name}`}.</p>
+            </div>
+            <div>
+                <label htmlFor="headers_template">Headers (JSON format)</label>
+                <textarea id="headers_template" name="headers_template" rows={4} value={nodeData.headers_template || ''} onChange={handleChange} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
+            </div>
+            {['POST', 'PUT', 'PATCH'].includes(nodeData.http_method?.toUpperCase()) && (
+                <div>
+                    <label htmlFor="body_template">Body (JSON format)</label>
+                    <textarea id="body_template" name="body_template" rows={5} value={nodeData.body_template || ''} onChange={handleChange} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 export default HttpRequestNode;

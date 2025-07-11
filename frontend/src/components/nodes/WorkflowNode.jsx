@@ -18,7 +18,6 @@ const WorkflowNode = ({ data, selected }) => {
         fetchWorkflows();
     }, []);
 
-    // --- THIS LOGIC IS UPDATED ---
     // We now use parseInt() to ensure we are comparing numbers with numbers.
     const targetWorkflow = data.target_workflow_id
         ? workflows.find(wf => wf.id === parseInt(data.target_workflow_id, 10))
@@ -55,5 +54,40 @@ const WorkflowNode = ({ data, selected }) => {
         </BaseNode>
     );
 };
+
+export const WorkflowNodeInspector = ({ nodeData, handleChange, availableWorkflows, currentWorkflowId }) => {
+    return (
+        <div className="space-y-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <h4 className="font-bold text-purple-800">Sub-Workflow Settings</h4>
+            <div>
+                <label htmlFor="target_workflow_id">Workflow to Execute</label>
+                <select id="target_workflow_id" name="target_workflow_id" value={nodeData.target_workflow_id ?? ''} onChange={handleChange} >
+                    <option value="">-- Select a Workflow --</option>
+                    {availableWorkflows.filter(wf => wf.id.toString() !== (currentWorkflowId || '').toString()).map(wf => (
+                        <option key={wf.id} value={wf.id}>{wf.name}</option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Runs another workflow as a sub-step. The current workflow is excluded to prevent loops.</p>
+            </div>
+            <div>
+                <label htmlFor="input_mappings">Input Context Mapping (JSON)</label>
+                <textarea
+                    id="input_mappings"
+                    name="input_mappings"
+                    rows={5}
+                    value={nodeData.input_mappings || ''}
+                    onChange={handleChange}
+                    className="font-mono text-sm"
+                    placeholder='{\n  "key_for_child": "{input.key_from_parent}",\n  "static_value": "hello"\n}'
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                    Map data from this workflow's state to the sub-workflow's context.
+                    Use variables like <strong>{`{input.var_name}`}</strong> or <strong>{`{query}`}</strong>.
+                </p>
+            </div>
+        </div>
+    );
+};
+
 
 export default WorkflowNode;

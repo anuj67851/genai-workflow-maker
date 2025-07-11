@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Dict, Any
 
@@ -18,16 +19,24 @@ class WorkflowCallAction(BaseActionExecutor):
         if not sub_workflow:
             return {"step_id": step.step_id, "success": False, "error": f"Sub-workflow with ID {target_id} not found."}
 
-        # Pass the parent's state down as the initial context for the sub-workflow.
-        # This makes parent outputs available to the child.
-        sub_context = state.get("collected_inputs", {}).copy()
-        sub_context["parent_query"] = state.get("query")
-        sub_context["parent_execution_id"] = state.get("execution_id")
+        # --- REFACTORED TO USE THE CORRECT HELPER ---
+        sub_context = {}
+        if step.input_mappings:
+            try:
+                # This helper now returns a ready-to-use Python dictionary.
+                sub_context = self._fill_json_template(step.input_mappings, state)
+                logger.info(f"Passing mapped context to sub-workflow: {sub_context}")
+            except json.JSONDecodeError as e:
+                # This error means the user's template itself is malformed JSON.
+                error_msg = f"Invalid JSON structure in 'input_mappings' for step '{step.step_id}': {e}"
+                logger.error(error_msg, exc_info=True)
+                return {"step_id": step.step_id, "success": False, "error": error_msg}
+            except Exception as e:
+                error_msg = f"Failed to process 'input_mappings': {e}"
+                logger.error(error_msg, exc_info=True)
+                return {"step_id": step.step_id, "success": False, "error": error_msg}
 
-        # The sub-workflow is started with the parent's original query.
-        query = state.get("query")
-
-        # We use the main engine's execution entry point to run the sub-workflow.
+        query = sub_context.get("query", state.get("query"))
         result = await self.engine._init_and_run(sub_workflow, query, sub_context)
 
         if result.get("status") == "completed":

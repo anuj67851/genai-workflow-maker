@@ -1,7 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import useWorkflowStore from '../../stores/workflowStore';
-import { TrashIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { TrashIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
+
+// Import all the new inspector components
+import { ToolNodeInspector } from '../nodes/ToolNode';
+import { WorkflowNodeInspector } from '../nodes/WorkflowNode';
+import { IngestionNodeInspector } from '../nodes/IngestionNode';
+import { FileStorageNodeInspector } from '../nodes/FileStorageNode';
+import { VectorDBIngestionNodeInspector } from '../nodes/VectorDBIngestionNode';
+import { VectorDBQueryNodeInspector } from '../nodes/VectorDBQueryNode';
+import { CrossEncoderRerankNodeInspector } from '../nodes/CrossEncoderRerankNode';
+import { HttpRequestNodeInspector } from '../nodes/HttpRequestNode';
+import { IntelligentRouterNodeInspector } from '../nodes/IntelligentRouterNode';
+
+// Map node types to their specific inspector components
+const nodeInspectorMap = {
+    agentic_tool_use: ToolNodeInspector,
+    workflow_call: WorkflowNodeInspector,
+    file_ingestion: IngestionNodeInspector,
+    file_storage: FileStorageNodeInspector,
+    vector_db_ingestion: VectorDBIngestionNodeInspector,
+    vector_db_query: VectorDBQueryNodeInspector,
+    cross_encoder_rerank: CrossEncoderRerankNodeInspector,
+    http_request: HttpRequestNodeInspector,
+    intelligent_router: IntelligentRouterNodeInspector,
+};
 
 // --- Helper constants for conditional rendering ---
 const NODES_WITH_PROMPT_TEMPLATE = [
@@ -15,29 +39,25 @@ const NODES_WITH_OUTPUT_KEY = [
 ];
 
 const InspectorPanel = ({ selection, currentWorkflowId }) => {
-    // --- THE KEY FIX - STEP 1: Subscribe directly to the `nodes` state ---
-    // This makes the component re-render whenever the nodes array in the store changes.
-    const { nodes, onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools, updateRouteName } = useWorkflowStore(state => ({
+    // --- Subscribe directly to the `nodes` state ---
+    const { nodes, onNodesChange, onEdgesChange, updateNodeData, tools, fetchTools } = useWorkflowStore(state => ({
         nodes: state.nodes,
         onNodesChange: state.onNodesChange,
         onEdgesChange: state.onEdgesChange,
         updateNodeData: state.updateNodeData,
         tools: state.tools,
         fetchTools: state.fetchTools,
-        updateRouteName: state.updateRouteName,
     }));
 
     const [availableWorkflows, setAvailableWorkflows] = useState([]);
 
-    // --- THE KEY FIX - STEP 2: Derive the selected node's data from the live store state ---
+    // --- Derive the selected node's data from the live store state ---
     const selectedNodeId = selection?.nodes[0]?.id;
     const selectedNode = nodes.find(n => n.id === selectedNodeId);
-
-    // `nodeData` is now always the most up-to-date version from the store.
     const nodeData = selectedNode?.data || {};
-    const nodeType = selectedNode?.type.replace('Node', '');
+    const nodeType = nodeData.action_type;
 
-    // Effect for fetching external data like other workflows and available tools.
+    // Effect for fetching external data.
     useEffect(() => {
         if (tools.length === 0) fetchTools();
         const fetchWorkflows = async () => {
@@ -57,23 +77,14 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         const { name, value, type, checked } = event.target;
         let finalValue;
 
-        // Special case for tool selection checkboxes which update an array.
         if (name === 'tool_names_checkbox') {
             const currentTools = nodeData.tool_names || [];
             finalValue = checked ? [...currentTools, value] : currentTools.filter(tool => tool !== value);
             updateNodeData(selectedNode.id, { ...nodeData, tool_names: finalValue });
-            return; // Exit early for this special case.
+            return;
         }
 
-        // Standard logic for all other input types.
-        if (type === 'checkbox') {
-            finalValue = checked;
-        } else if (type === 'number') {
-            finalValue = value === '' ? '' : parseInt(value, 10);
-        } else {
-            finalValue = value;
-        }
-
+        finalValue = type === 'checkbox' ? checked : type === 'number' ? (value === '' ? '' : parseInt(value, 10)) : value;
         updateNodeData(selectedNode.id, { ...nodeData, [name]: finalValue });
     };
 
@@ -100,9 +111,6 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         }
     };
 
-    const isDeletable = selectedNode && !['start', 'end'].includes(selectedNode.id);
-
-    // Render placeholder if no node is selected.
     if (!selectedNode) {
         return (
             <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel">
@@ -112,9 +120,10 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         );
     }
 
-    // --- Render functions for different field types ---
-    // All inputs now use `value` and `checked` to be fully controlled by React state.
+    const isDeletable = selectedNode && !['start', 'end'].includes(selectedNode.id);
+    const NodeSpecificInspector = nodeInspectorMap[nodeType];
 
+    // --- RENDER FUNCTIONS FOR COMMON FIELDS ---
     const renderBaseFields = () => (
         <>
             <div>
@@ -152,219 +161,6 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         </div>
     );
 
-    const renderToolSelection = () => {
-        const selectedToolSchemas = tools.filter(tool => nodeData.tool_names?.includes(tool.name));
-        return (
-            <div>
-                <label>Tool Usage</label>
-                <div className="space-y-3 rounded-md border border-gray-200 p-3 bg-white">
-                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                        <input type="radio" id="tool_auto" name="tool_selection" value="auto" checked={nodeData.tool_selection === 'auto'} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                        <label htmlFor="tool_auto" className="text-sm font-medium text-gray-700">Let agent decide from all available tools</label>
-                    </div>
-                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                        <input type="radio" id="tool_manual" name="tool_selection" value="manual" checked={nodeData.tool_selection === 'manual'} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                        <label htmlFor="tool_manual" className="text-sm font-medium text-gray-700">Select specific tools for the agent</label>
-                    </div>
-                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                        <input type="radio" id="tool_none" name="tool_selection" value="none" checked={nodeData.tool_selection === 'none'} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                        <label htmlFor="tool_none" className="text-sm font-medium text-gray-700">Do not use any tools (direct LLM response)</label>
-                    </div>
-                </div>
-
-                {nodeData.tool_selection === 'manual' && (
-                    <div className="mt-2 p-3 border border-gray-200 rounded-md bg-gray-50 max-h-48 overflow-y-auto space-y-2">
-                        <p className="text-xs text-gray-500 mb-2">Select one or more tools for the agent to use:</p>
-                        {tools.map(tool => (
-                            <div key={tool.name} className="grid grid-cols-[auto_1fr] items-center gap-x-3">
-                                <input type="checkbox" id={`tool-chk-${tool.name}`} name="tool_names_checkbox" value={tool.name} checked={nodeData.tool_names?.includes(tool.name) || false} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                                <label htmlFor={`tool-chk-${tool.name}`} className="text-sm text-gray-900 font-mono">{tool.name}</label>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {nodeData.tool_selection === 'manual' && selectedToolSchemas.length > 0 && (
-                    <div className="mt-3 p-3 border border-blue-200 rounded-lg bg-blue-50 space-y-2">
-                        <div className="flex items-center gap-2 text-blue-800"><InformationCircleIcon className="h-5 w-5"/><h4 className="text-sm font-bold">Tool Return Information</h4></div>
-                        {selectedToolSchemas.map(tool => (
-                            <div key={`info-${tool.name}`} className="text-xs">
-                                <p className="font-bold font-mono text-blue-900">{tool.name}:</p>
-                                <p className="text-blue-700 pl-2">{tool.returns?.description || "No return description provided."}</p>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const renderWorkflowCallFields = () => (
-        <div>
-            <label htmlFor="target_workflow_id">Workflow to Execute</label>
-            <select id="target_workflow_id" name="target_workflow_id" value={nodeData.target_workflow_id ?? ''} onChange={handleChange} >
-                <option value="">-- Select a Workflow --</option>
-                {availableWorkflows.filter(wf => wf.id.toString() !== (currentWorkflowId || '').toString()).map(wf => (
-                    <option key={wf.id} value={wf.id}>{wf.name}</option>
-                ))}
-            </select>
-            <p className="text-xs text-gray-400 mt-1">Runs another workflow as a sub-step. The current workflow is excluded to prevent loops.</p>
-        </div>
-    );
-
-    const renderFileIngestionFields = () => (
-        <div className="space-y-4">
-            <div>
-                <label htmlFor="max_files">Maximum Number of Files</label>
-                <input id="max_files" name="max_files" type="number" min="1" value={nodeData.max_files ?? 1} onChange={handleChange} onBlur={handleBlur} />
-            </div>
-            <div>
-                <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
-                <input id="allowed_file_types" name="allowed_file_types" value={Array.isArray(nodeData.allowed_file_types) ? nodeData.allowed_file_types.join(', ') : ''} onChange={handleChange} onBlur={handleBlur} placeholder=".pdf, .txt, .csv" />
-                <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
-            </div>
-        </div>
-    );
-
-    const renderVectorDbQueryFields = () => (
-        <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-            <h4 className="font-bold text-teal-800">Vector Query Settings</h4>
-            <div>
-                <label htmlFor="collection_name">Collection Name</label>
-                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
-            </div>
-            <div>
-                <label htmlFor="top_k">Top-K</label>
-                <input id="top_k" name="top_k" type="number" min="1" value={nodeData.top_k ?? 5} onChange={handleChange} onBlur={handleBlur} />
-                <p className="text-xs text-gray-400 mt-1">The number of initial documents to retrieve.</p>
-            </div>
-        </div>
-    );
-
-    const renderCrossEncoderRerankFields = () => (
-        <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-            <h4 className="font-bold text-teal-800">Re-Ranker Settings</h4>
-            <div>
-                <label htmlFor="rerank_top_n">Return Top-N</label>
-                <input id="rerank_top_n" name="rerank_top_n" type="number" min="1" value={nodeData.rerank_top_n ?? 3} onChange={handleChange} onBlur={handleBlur} />
-                <p className="text-xs text-gray-400 mt-1">The final number of documents to return after re-ranking.</p>
-            </div>
-        </div>
-    );
-
-    const renderHttpRequestFields = () => (
-        <div className="space-y-4 p-3 bg-slate-50 border border-slate-300 rounded-lg">
-            <h4 className="font-bold text-slate-800">API Request Configuration</h4>
-            <div>
-                <label htmlFor="http_method">HTTP Method</label>
-                <select id="http_method" name="http_method" value={nodeData.http_method || 'GET'} onChange={handleChange}>
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="PATCH">PATCH</option>
-                    <option value="DELETE">DELETE</option>
-                </select>
-            </div>
-            <div>
-                <label htmlFor="url_template">Request URL</label>
-                <input id="url_template" name="url_template" value={nodeData.url_template || ''} onChange={handleChange} placeholder="https://api.example.com/items/{input.item_id}" />
-                <p className="text-xs text-gray-400 mt-1">You can use variables like {`{input.var_name}`}.</p>
-            </div>
-            <div>
-                <label htmlFor="headers_template">Headers (JSON format)</label>
-                <textarea id="headers_template" name="headers_template" rows={4} value={nodeData.headers_template || ''} onChange={handleChange} placeholder={`{\n  "Authorization": "Bearer {context.api_key}"\n}`} />
-            </div>
-            {['POST', 'PUT', 'PATCH'].includes(nodeData.http_method?.toUpperCase()) && (
-                <div>
-                    <label htmlFor="body_template">Body (JSON format)</label>
-                    <textarea id="body_template" name="body_template" rows={5} value={nodeData.body_template || ''} onChange={handleChange} placeholder={`{\n  "name": "{input.user_name}",\n  "value": 123\n}`} />
-                </div>
-            )}
-        </div>
-    );
-
-    const renderVectorDbIngestionFields = () => (
-        <div className="space-y-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-            <h4 className="font-bold text-teal-800">Vector Ingestion Settings</h4>
-            <div>
-                <label htmlFor="collection_name">Collection Name</label>
-                <input id="collection_name" name="collection_name" value={nodeData.collection_name || ''} onChange={handleChange} placeholder="e.g., project_docs_v1"/>
-            </div>
-            <div>
-                <label htmlFor="embedding_model">Embedding Model</label>
-                <input id="embedding_model" name="embedding_model" value={nodeData.embedding_model || ''} onChange={handleChange} placeholder="text-embedding-3-small"/>
-            </div>
-            <div>
-                <label htmlFor="chunk_size">Chunk Size</label>
-                <input id="chunk_size" name="chunk_size" type="number" min="1" value={nodeData.chunk_size ?? 1000} onChange={handleChange} />
-            </div>
-            <div>
-                <label htmlFor="chunk_overlap">Chunk Overlap</label>
-                <input id="chunk_overlap" name="chunk_overlap" type="number" min="0" value={nodeData.chunk_overlap ?? 200} onChange={handleChange} />
-            </div>
-        </div>
-    );
-
-    const renderFileStorageFields = () => (
-        <div className="space-y-4">
-            <div>
-                <label htmlFor="storage_path">Storage Subdirectory (Optional)</label>
-                <input id="storage_path" name="storage_path" value={nodeData.storage_path || ''} onChange={handleChange} placeholder="e.g., ticket_attachments" />
-                <p className="text-xs text-gray-400 mt-1">A subdirectory within the main attachments folder to save this file to.</p>
-            </div>
-            <div>
-                <label htmlFor="max_files">Maximum Number of Files</label>
-                <input id="max_files" name="max_files" type="number" min="1" value={nodeData.max_files ?? 1} onChange={handleChange} />
-            </div>
-            <div>
-                <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
-                <input id="allowed_file_types" name="allowed_file_types" value={(nodeData.allowed_file_types || []).join(', ')} onChange={handleChange} placeholder=".png, .jpg, .pdf" />
-                <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
-            </div>
-        </div>
-    );
-
-    const renderIntelligentRouterFields = () => {
-        const currentRoutes = nodeData.routes || {};
-        const handleRouteNameChange = (oldName, newName) => {
-            const trimmedNewName = newName.trim();
-            if (trimmedNewName && trimmedNewName !== oldName && !currentRoutes[trimmedNewName]) {
-                updateRouteName(selectedNode.id, oldName, trimmedNewName);
-            }
-        };
-        const addRoute = () => {
-            let i = 1;
-            let newRouteName = `new_route_${i}`;
-            while (currentRoutes[newRouteName]) { i++; newRouteName = `new_route_${i}`; }
-            const updatedRoutes = { ...currentRoutes, [newRouteName]: 'END' };
-            const currentVersion = nodeData._version || 0;
-            updateNodeData(selectedNode.id, { ...nodeData, routes: updatedRoutes, _version: currentVersion + 1 });
-        };
-        const removeRoute = (routeName) => {
-            const updatedRoutes = { ...currentRoutes };
-            delete updatedRoutes[routeName];
-            const currentVersion = nodeData._version || 0;
-            updateNodeData(selectedNode.id, { ...nodeData, routes: updatedRoutes, _version: currentVersion + 1 });
-        };
-        return (
-            <div className="space-y-4 p-3 bg-fuchsia-50 border border-fuchsia-300 rounded-lg">
-                <h4 className="font-bold text-fuchsia-800">Routing Options</h4>
-                <p className="text-xs text-gray-500 -mt-2">Define output paths. The LLM will choose one. The handle ID on the node must match the route name.</p>
-                <div className="space-y-2">
-                    {Object.keys(currentRoutes).map(routeName => (
-                        <div key={routeName} className="flex items-center gap-2">
-                            <input type="text" defaultValue={routeName} onBlur={(e) => handleRouteNameChange(routeName, e.target.value)} placeholder="Route Name" className="flex-grow p-1 border border-gray-300 rounded-md" />
-                            <button onClick={() => removeRoute(routeName)} className="p-1 text-red-500 hover:text-red-700"> <TrashIcon className="h-5 w-5" /> </button>
-                        </div>
-                    ))}
-                </div>
-                <button onClick={addRoute} className="w-full text-sm bg-fuchsia-200 text-fuchsia-800 font-semibold py-1 px-3 rounded-md hover:bg-fuchsia-300 transition-colors">
-                    + Add Route
-                </button>
-            </div>
-        );
-    };
-
     // --- Main component return ---
     return (
         <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
@@ -374,23 +170,30 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                 </h3>
 
                 <div className="space-y-4">
+                    {/* Common fields rendered for all nodes */}
                     {renderBaseFields()}
                     {NODES_WITH_PROMPT_TEMPLATE.includes(nodeType) && renderPromptTemplateField()}
                     {NODES_WITH_DATA_SOURCE.includes(nodeType) && renderDataSourceField()}
 
-                    {nodeType === 'agentic_tool_use' && renderToolSelection()}
-                    {nodeType === 'workflow_call' && renderWorkflowCallFields()}
-                    {nodeType === 'file_ingestion' && renderFileIngestionFields()}
-                    {nodeType === 'file_storage' && renderFileStorageFields()}
-                    {nodeType === 'http_request' && renderHttpRequestFields()}
-                    {nodeType === 'vector_db_ingestion' && renderVectorDbIngestionFields()}
-                    {nodeType === 'vector_db_query' && renderVectorDbQueryFields()}
-                    {nodeType === 'cross_encoder_rerank' && renderCrossEncoderRerankFields()}
-                    {nodeType === 'intelligent_router' && renderIntelligentRouterFields()}
+                    {/* Dynamically render the node-specific inspector */}
+                    {NodeSpecificInspector && (
+                        <NodeSpecificInspector
+                            nodeId={selectedNode.id}
+                            nodeData={nodeData}
+                            handleChange={handleChange}
+                            handleBlur={handleBlur}
+                            tools={tools}
+                            availableWorkflows={availableWorkflows}
+                            currentWorkflowId={currentWorkflowId}
+                        />
+                    )}
 
+                    {/* Common output key field */}
                     {NODES_WITH_OUTPUT_KEY.includes(nodeType) && renderOutputKeyField()}
                 </div>
             </div>
+
+            {/* Common delete button */}
             <div className="mt-6 pt-6 border-t border-gray-200">
                 <button onClick={handleDelete} disabled={!isDeletable} className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed transition-colors" >
                     <TrashIcon className="h-5 w-5"/>

@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 import numpy as np
 from typing import Dict, Any
 
@@ -23,15 +22,25 @@ class VectorDbIngestionAction(BaseActionExecutor):
             return {"step_id": step.step_id, "success": False, "error": "RAG dependencies (faiss, langchain) are not installed."}
 
         try:
-            # === Step 1: Get the input data correctly ===
-            if not step.prompt_template or not re.search(r'\{input\.([a-zA-Z0-9_]+)}', step.prompt_template):
-                return {"step_id": step.step_id, "success": False, "error": "Ingestion prompt_template must contain an {input.variable_name} placeholder."}
+            # Step 1: Use the main helper to fill the entire template.
+            # This can now handle any combination of variables from context or input.
+            if not step.prompt_template:
+                return {"step_id": step.step_id, "success": False, "error": "Ingestion node is missing its prompt_template / data source."}
 
-            input_variable_name = re.search(r'\{input\.([a-zA-Z0-9_]+)}', step.prompt_template).group(1)
-            input_data = state.get("collected_inputs", {}).get(input_variable_name)
+            input_data = self._fill_prompt_template(step.prompt_template, state)
 
             if not input_data:
-                return {"step_id": step.step_id, "success": False, "error": f"Ingestion step received no data from input variable '{input_variable_name}'."}
+                return {"step_id": step.step_id, "success": False, "error": "Ingestion step received no data after filling the template. Check if the source variables exist and have content."}
+
+            # The result of _fill_prompt_template for complex types (like a list from File Ingestion)
+            # is a JSON string, so we should try to parse it.
+            try:
+                potential_list = json.loads(input_data)
+                if isinstance(potential_list, list):
+                    input_data = potential_list
+            except (json.JSONDecodeError, TypeError):
+                # This is expected if the template resulted in a plain string. We can safely ignore it.
+                pass
 
             # === Step 2: Initialize the text splitter ===
             text_splitter = RecursiveCharacterTextSplitter(
@@ -42,19 +51,17 @@ class VectorDbIngestionAction(BaseActionExecutor):
             # === Step 3: Process input based on its type ===
             documents = []
             if isinstance(input_data, list):
-                # This handles the File Ingestion case, where input_data is a list of strings.
-                # Each string is a full document.
+                # Handles cases where the input variable was a list of strings (e.g., from file ingestion).
                 logger.info(f"Processing {len(input_data)} document(s) from input list.")
-                # We use split_documents, which is designed to take a list of docs and chunk each one.
-                # Langchain expects "Document" objects, so we create them first.
-                langchain_docs = text_splitter.create_documents(input_data)
+                # We need to ensure all items in the list are strings.
+                string_docs = [str(doc) for doc in input_data]
+                langchain_docs = text_splitter.create_documents(string_docs)
                 documents = text_splitter.split_documents(langchain_docs)
             elif isinstance(input_data, str):
-                # This handles the Human Input case, where input_data is a single string.
+                # Handles cases where the template resulted in a single block of text.
                 logger.info("Processing a single text block input.")
-                # We use split_text for a single string.
                 split_texts = text_splitter.split_text(input_data)
-                documents = [d for d in split_texts] # Ensure output is a list of strings
+                documents = [d for d in split_texts]
             else:
                 return {"step_id": step.step_id, "success": False, "error": f"Unsupported input type for ingestion: {type(input_data)}"}
 
@@ -63,7 +70,6 @@ class VectorDbIngestionAction(BaseActionExecutor):
 
             logger.info(f"Splitting successful. Total chunks created: {len(documents)}")
 
-            # Langchain's split_documents returns Document objects, we need the text content
             doc_contents = [doc.page_content if hasattr(doc, 'page_content') else doc for doc in documents]
 
             # === Step 4: Embed and Ingest ===
@@ -75,7 +81,8 @@ class VectorDbIngestionAction(BaseActionExecutor):
             index = faiss.IndexFlatL2(dimension)
             index.add(np.array(embeddings, dtype=np.float32))
 
-            collection_name = step.collection_name
+            # Also allow the collection name to be sourced from any state variable.
+            collection_name = self._fill_prompt_template(step.collection_name, state)
             if not collection_name:
                 return {"step_id": step.step_id, "success": False, "error": "Missing 'collection_name' for ingestion step."}
 

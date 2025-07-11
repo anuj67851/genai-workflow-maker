@@ -3,9 +3,9 @@ import BaseNode from './BaseNode';
 import { DocumentArrowUpIcon } from '@heroicons/react/24/outline';
 
 const IngestionNode = ({ data, selected }) => {
-    const fileTypes = data.allowed_file_types?.length > 0
-        ? data.allowed_file_types.join(', ')
-        : 'Any';
+    const fileTypes = Array.isArray(data.allowed_file_types)
+        ? data.allowed_file_types.join(', ') || 'Any'
+        : data.allowed_file_types || 'Any';
 
     return (
         <BaseNode data={data} selected={selected}>
@@ -38,6 +38,27 @@ const IngestionNode = ({ data, selected }) => {
                 )}
             </div>
         </BaseNode>
+    );
+};
+
+export const IngestionNodeInspector = ({ nodeData, handleChange, handleBlur }) => {
+    const displayValue = (Array.isArray(nodeData.allowed_file_types)
+        ? nodeData.allowed_file_types.join(', ')
+        : nodeData.allowed_file_types) || '';
+
+    return (
+        <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <h4 className="font-bold text-orange-800">File Ingestion Settings</h4>
+            <div>
+                <label htmlFor="max_files">Maximum Number of Files</label>
+                <input id="max_files" name="max_files" type="number" min="1" value={nodeData.max_files ?? 1} onChange={handleChange} onBlur={handleBlur} />
+            </div>
+            <div>
+                <label htmlFor="allowed_file_types">Allowed File Types (comma-separated)</label>
+                <input id="allowed_file_types" name="allowed_file_types" value={displayValue} onChange={handleChange} onBlur={handleBlur} placeholder=".pdf, .txt, .csv" />
+                <p className="text-xs text-gray-400 mt-1">Leave blank to allow any file type.</p>
+            </div>
+        </div>
     );
 };
 
