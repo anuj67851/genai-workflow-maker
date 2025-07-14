@@ -15,6 +15,7 @@ import {
     ShareIcon,
 } from '@heroicons/react/24/outline';
 import useWorkflowStore from '../../stores/workflowStore';
+import { toast } from 'react-hot-toast';
 
 const Sidebar = () => {
     const {
@@ -44,20 +45,21 @@ const Sidebar = () => {
     const handleSaveWorkflow = async () => {
         const currentStoreState = useWorkflowStore.getState();
         if (!currentStoreState.workflowName) {
-            alert("Please enter a name for the workflow.");
+            toast.error("Please enter a name for the workflow.");
             return;
         }
 
         // Uses the function from the store to get a clean JSON object
         const workflowData = currentStoreState.getFlowAsJson();
+        const toastId = toast.loading('Saving workflow...');
 
         try {
             const response = await axios.post('/api/workflows', workflowData);
-            alert(`Workflow "${response.data.name}" saved successfully with ID: ${response.data.id}`);
-            // Optionally, navigate to the new workflow's edit page
+            toast.success(`Workflow "${response.data.name}" saved successfully!`, { id: toastId });
         } catch (error) {
             console.error("Failed to save workflow:", error);
-            alert(`Error: ${error.response?.data?.detail || error.message}`);
+            const errorMsg = error.response?.data?.detail || error.message;
+            toast.error(`Error saving: ${errorMsg}`, { id: toastId });
         }
     };
 

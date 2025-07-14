@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 export const useWorkflowList = () => {
     const [workflows, setWorkflows] = useState([]);
@@ -12,7 +13,7 @@ export const useWorkflowList = () => {
             setWorkflows(response.data);
         } catch (error) {
             console.error("Failed to fetch workflows:", error);
-            alert("Could not fetch the list of workflows.");
+            toast.error("Could not fetch the list of workflows.");
         }
     }, []);
 
@@ -20,12 +21,13 @@ export const useWorkflowList = () => {
         if (window.confirm("Are you sure you want to permanently delete this workflow?")) {
             try {
                 await axios.delete(`/api/workflows/${workflowId}`);
+                toast.success("Workflow deleted successfully.");
                 if (onDeletionCallback) {
                     onDeletionCallback();
                 }
                 fetchWorkflows(); // Refresh the list after deletion
             } catch (error) {
-                alert(`Error deleting workflow: ${error.response?.data?.detail || error.message}`);
+                toast.error(`Error deleting workflow: ${error.response?.data?.detail || error.message}`);
             }
         }
     }, [fetchWorkflows]);

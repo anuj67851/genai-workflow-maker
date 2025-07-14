@@ -10,5 +10,22 @@ import './index.css'
 ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
         <App />
+        <Toaster
+            position="top-center"
+            reverseOrder={false}
+            toastOptions={{
+                success: {
+                    duration: 3000,
+                },
+                error: {
+                    duration: 5000,
+                },
+                style: {
+                    fontSize: '16px',
+                    maxWidth: '500px',
+                    padding: '16px 24px',
+                },
+            }}
+        />
     </BrowserRouter>
 );

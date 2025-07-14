@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import { ArrowPathIcon, PencilSquareIcon, TrashIcon, PaperAirplaneIcon, DocumentArrowUpIcon } from '@heroicons/react/24/solid';
 import { useWorkflowList } from '../hooks/useWorkflowList';
 import { useWorkflowChat } from '../hooks/useWorkflowChat';
+import { toast } from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const WorkflowExecutor = () => {
     const [selectedWorkflow, setSelectedWorkflow] = useState(null);
@@ -39,7 +42,7 @@ const WorkflowExecutor = () => {
     const handleFileSelection = (e) => {
         const selected = Array.from(e.target.files);
         if(selected.length > executionState.maxFiles) {
-            alert(`You can only upload a maximum of ${executionState.maxFiles} file(s).`);
+            toast.error(`You can only upload a maximum of ${executionState.maxFiles} file(s).`);
             return;
         }
         setFilesToUpload(selected);
@@ -104,8 +107,13 @@ const WorkflowExecutor = () => {
             <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex my-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-lg max-w-lg whitespace-pre-wrap ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                            {msg.content}
+                        <div className={`p-3 rounded-lg max-w-lg ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                            <ReactMarkdown
+                                className="prose prose-sm max-w-none" // `prose` class for styling
+                                remarkPlugins={[remarkGfm]} // Enable GitHub Flavored Markdown
+                            >
+                                {msg.content}
+                            </ReactMarkdown>
                         </div>
                     </div>
                 ))}

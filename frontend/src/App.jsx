@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { PlayCircleIcon, PlusCircleIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
-
+import { toast } from 'react-hot-toast';
 import WorkflowBuilder from './views/WorkflowBuilder';
 import WorkflowExecutor from './views/WorkflowExecutor';
 import axios from "axios";
@@ -14,14 +14,16 @@ function App() {
 
     // Handler function for the new button
     const handleRescanTools = async () => {
+        const toastId = toast.loading('Rescanning tools...');
         try {
             const response = await axios.post('/api/tools/rescan');
-            alert(response.data.message || 'Tools rescanned successfully!');
+            toast.success(response.data.message || 'Tools rescanned successfully!', { id: toastId });
         } catch (error) {
             const errorMsg = error.response?.data?.detail || 'An unknown error occurred.';
-            alert(`Failed to rescan tools: ${errorMsg}`);
+            toast.error(`Failed to rescan tools: ${errorMsg}`, { id: toastId });
         }
     };
+
 
     return (
         <div className="flex flex-col h-screen bg-white">

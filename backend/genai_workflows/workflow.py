@@ -110,3 +110,74 @@ class Workflow:
                 workflow.steps[step_id] = WorkflowStep.from_dict(step_dict)
 
         return workflow
+
+    @classmethod
+    def from_graph(
+            cls, name: str, description: str, raw_definition: str, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]
+    ) -> 'Workflow':
+        """
+        Constructs a Workflow object from frontend graph data (nodes and edges).
+        """
+        edges_by_source = {}
+        for edge in edges:
+            source_id = edge.get("source")
+            source_handle = edge.get("sourceHandle") or "default"
+            if source_id not in edges_by_source:
+                edges_by_source[source_id] = {}
+            edges_by_source[source_id][source_handle] = edge.get("target")
+
+        backend_steps = {}
+        for node in nodes:
+            node_id = node.get("id")
+            # The frontend node type has "Node" appended, e.g., "condition_checkNode"
+            # The backend action_type is just "condition_check"
+            node_type = node.get("type", "").replace("Node", "")
+            if node_type in ["start", "end"]:
+                continue
+
+            # The frontend passes all the step data inside the `data` key.
+            step_data = node.get("data", {})
+            step_data["step_id"] = node_id
+
+            # For most nodes, the frontend may not have an action_type in its data block,
+            # so we derive it from the node's main `type` field.
+            if "action_type" not in step_data:
+                step_data["action_type"] = node_type
+
+            connections = edges_by_source.get(node_id, {})
+
+            # For intelligent_router, the routes are already mapped on the frontend
+            # and don't need special on_success/on_failure handling here.
+            if node_type == "intelligent_router":
+                pass # The routes are already in step_data['routes']
+            elif node_type == "condition_check":
+                # Explicit handles for condition nodes
+                step_data["on_success"] = connections.get("onSuccess", "END")
+                step_data["on_failure"] = connections.get("onFailure", "END")
+            else:
+                # Default handle for all other nodes
+                step_data["on_success"] = connections.get("default", "END")
+                # Optional failure path
+                if "onFailure" in connections:
+                    step_data["on_failure"] = connections.get("onFailure")
+
+            # Normalize 'end' to 'END' for consistency
+            if step_data.get("on_success") == "end": step_data["on_success"] = "END"
+            if step_data.get("on_failure") == "end": step_data["on_failure"] = "END"
+
+            # Remove any frontend-specific helper properties
+            step_data.pop('_version', None)
+
+            backend_steps[node_id] = WorkflowStep.from_dict(step_data)
+
+        start_step_id = edges_by_source.get("start", {}).get("default")
+        if not start_step_id:
+            raise ValueError("Workflow must have a connection from the START node.")
+
+        return cls(
+            name=name,
+            description=description,
+            steps=backend_steps,
+            start_step_id=start_step_id,
+            raw_definition=raw_definition
+        )

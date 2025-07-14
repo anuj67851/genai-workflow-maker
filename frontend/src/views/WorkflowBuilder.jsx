@@ -1,4 +1,3 @@
-// Filename: frontend/src\views\WorkflowBuilder.jsx
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactFlow, {
@@ -10,6 +9,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 import Sidebar from '../components/ui/Sidebar';
 import InspectorPanel from '../components/ui/InspectorPanel';
@@ -101,7 +101,7 @@ const BuilderComponent = () => {
                 setTimeout(() => fitView({ padding: 0.4, duration: 200 }), 100);
             } catch (error) {
                 console.error("Failed to load workflow:", error);
-                alert("Could not load the specified workflow. Starting a new one.");
+                toast.error("Could not load the specified workflow. Starting a new one.");
                 setFlow({ nodes: initialNodes, edges: [], name: 'Untitled Workflow', description: '' });
                 navigate('/');
             }

@@ -70,35 +70,19 @@ def list_workflows_endpoint(eng: WorkflowEngine = Depends(get_engine)):
 @app.post("/api/workflows", summary="Save or update a workflow")
 def save_workflow_endpoint(payload: WorkflowSaveRequest, eng: WorkflowEngine = Depends(get_engine)):
     try:
-        nodes, edges = payload.nodes, payload.edges
-        edges_by_source = {}
-        for edge in edges:
-            source_id, source_handle = edge.get("source"), edge.get("sourceHandle") or "default"
-            if source_id not in edges_by_source: edges_by_source[source_id] = {}
-            edges_by_source[source_id][source_handle] = edge.get("target")
-        backend_steps = {}
-        for node in nodes:
-            node_id, node_type = node.get("id"), node.get("type", "").replace("Node", "")
-            if node_type in ["start", "end"]: continue
-            step_data = node.get("data", {}); step_data["step_id"] = node_id
-            connections = edges_by_source.get(node_id, {})
-            if node_type == "condition_check":
-                step_data["on_success"] = connections.get("onSuccess", "END")
-                step_data["on_failure"] = connections.get("onFailure", "END")
-            else:
-                step_data["on_success"] = connections.get("default", "END")
-            if step_data.get("on_success") == "end": step_data["on_success"] = "END"
-            if step_data.get("on_failure") == "end": step_data["on_failure"] = "END"
-            backend_steps[node_id] = WorkflowStep.from_dict(step_data)
-        start_step_id = edges_by_source.get("start", {}).get("default")
-        if not start_step_id: raise ValueError("Workflow must have a connection from the START node.")
-        workflow_to_save = Workflow(
-            name=payload.name, description=payload.description, steps=backend_steps,
-            start_step_id=start_step_id, raw_definition=payload.model_dump_json()
+        workflow_to_save = Workflow.from_graph(
+            name=payload.name,
+            description=payload.description,
+            raw_definition=payload.model_dump_json(),
+            nodes=payload.nodes,
+            edges=payload.edges
         )
         workflow_id = eng.save_workflow(workflow_to_save)
         return {"id": workflow_id, "name": workflow_to_save.name}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
+        logging.error(f"Failed to process workflow graph: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to process workflow graph: {e}")
 
 @app.get("/api/workflows/{workflow_id}", summary="Get a single workflow for the builder")
