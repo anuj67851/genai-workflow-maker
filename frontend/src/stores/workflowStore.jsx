@@ -105,7 +105,6 @@ const useWorkflowStore = create((set, get) => ({
                 return node;
             }),
             // 2. IMPORTANT: Delete any edge that was connected to the OLD handle.
-            // This is the clean and correct way to handle the state change.
             edges: state.edges.filter(edge =>
                 !(edge.source === nodeId && edge.sourceHandle === oldName)
             ),

@@ -67,107 +67,41 @@ class WorkflowEngine:
 
     async def resume_execution_with_files(self, execution_id: str, files: List[UploadFile]) -> Dict[str, Any]:
         """
-        Handles file uploads by checking the paused step's action type.
-        - For 'file_ingestion', it extracts text content.
-        - For 'file_storage', it saves the file and returns its path.
+        Handles file uploads by delegating to the FileProcessor based on the
+        paused step's action type.
         """
         self.logger.info(f"Resuming execution {execution_id} with {len(files)} file(s).")
 
-        # First, we need to know what kind of step paused for this upload.
         paused_state = self.storage.get_execution_state(execution_id)
         if not paused_state:
             return {"status": "failed", "error": "Execution ID not found."}
+
         workflow = self.storage.get_workflow(paused_state["workflow_id"])
         paused_step = workflow.get_step(paused_state.get("current_step_id"))
         if not paused_step:
             return {"status": "failed", "error": "Could not find the paused step in the workflow."}
 
-        # This will hold the final output for the step (either content or paths)
         final_output = []
-
-        if paused_step.action_type == 'file_ingestion':
-            # --- Text Extraction Logic ---
-            self.logger.info("Handling as 'file_ingestion': Extracting text content.")
-
-            try:
-                # Import necessary libraries for text extraction
-                import PyPDF2
-                from PIL import Image
-                import pytesseract
-                import docx
-
-                for file in files:
-                    file_content = await file.read()
-                    file_extension = os.path.splitext(file.filename)[1].lower()
-
-                    if file_extension == '.pdf':
-                        # Extract text from PDF
-                        import io
-                        pdf_file = io.BytesIO(file_content)
-                        pdf_reader = PyPDF2.PdfReader(pdf_file)
-                        text = ""
-                        for page_num in range(len(pdf_reader.pages)):
-                            text += pdf_reader.pages[page_num].extract_text()
-                        final_output.append(text)
-
-                    elif file_extension in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']:
-                        # Extract text from image using OCR
-                        import io
-                        image = Image.open(io.BytesIO(file_content))
-                        text = pytesseract.image_to_string(image)
-                        final_output.append(text)
-
-                    elif file_extension == '.docx':
-                        # Extract text from Word document
-                        import io
-                        doc = docx.Document(io.BytesIO(file_content))
-                        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-                        final_output.append(text)
-
-                    elif file_extension == '.txt':
-                        # Extract text from plain text file
-                        text = file_content.decode('utf-8')
-                        final_output.append(text)
-
-                    else:
-                        # For unsupported file types, add a placeholder
-                        final_output.append(f"[Unsupported file type: {file_extension}]")
-
+        try:
+            if paused_step.action_type == 'file_ingestion':
+                self.logger.info("Handling as 'file_ingestion': Delegating to FileProcessor for text extraction.")
+                final_output = await self.file_processor.extract_text_from_files(files)
                 if not final_output:
                     return {"status": "failed", "error": "No text could be extracted from the uploaded files."}
 
-            except Exception as e:
-                error_msg = f"Text extraction failed: {e}"
-                self.logger.error(error_msg, exc_info=True)
-                return {"status": "failed", "error": error_msg}
+            elif paused_step.action_type == 'file_storage':
+                self.logger.info("Handling as 'file_storage': Delegating to FileProcessor for saving.")
+                base_storage_dir = "file_attachments"
+                custom_path = paused_step.storage_path or 'general'
+                final_output = await self.file_processor.save_files(files, base_storage_dir, custom_path, execution_id)
 
-        elif paused_step.action_type == 'file_storage':
-            # --- Save and Reference Logic ---
-            self.logger.info("Handling as 'file_storage': Saving files and returning paths.")
-            base_storage_dir = "file_attachments"
-            # Use a subdirectory specified in the node, or a default
-            custom_path = paused_step.storage_path or 'general'
-            target_dir = os.path.join(base_storage_dir, custom_path, execution_id)
-            os.makedirs(target_dir, exist_ok=True)
+            else:
+                return {"status": "failed", "error": f"Workflow paused for file upload on an unsupported step type: {paused_step.action_type}"}
 
-            saved_file_paths = []
-            for file in files:
-                try:
-                    # Create a secure path to save the file
-                    file_location = os.path.join(target_dir, file.filename)
-                    with open(file_location, "wb") as buffer:
-                        shutil.copyfileobj(file.file, buffer)
-                    saved_file_paths.append(file_location)
-                    self.logger.info(f"Successfully saved file to: {file_location}")
-                except Exception as e:
-                    error_msg = f"Failed to save file {file.filename}: {e}"
-                    self.logger.error(error_msg, exc_info=True)
-                    return {"status": "failed", "error": error_msg}
-            final_output = saved_file_paths
-
-        else:
-            # Should not happen if the workflow is designed correctly
-            return {"status": "failed", "error": f"Workflow paused for file upload on an unsupported step type: {paused_step.action_type}"}
+        except Exception as e:
+            error_msg = f"File processing failed: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return {"status": "failed", "error": error_msg}
 
         # Call the standard resume logic with the correctly prepared output
         return await self.resume_execution(execution_id, final_output)
