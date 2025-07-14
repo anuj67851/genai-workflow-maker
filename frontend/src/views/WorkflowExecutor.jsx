@@ -107,13 +107,12 @@ const WorkflowExecutor = () => {
             <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex my-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-lg max-w-lg ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                            <ReactMarkdown
-                                className="prose prose-sm max-w-none" // `prose` class for styling
-                                remarkPlugins={[remarkGfm]} // Enable GitHub Flavored Markdown
-                            >
-                                {msg.content}
-                            </ReactMarkdown>
+                        <div className={`p-3 rounded-lg max-w-lg ${msg.role === 'user' ? 'bg-indigo-500' : 'bg-gray-200'}`}>
+                            <div className={`prose prose-sm max-w-none [&_p]:font-medium ${msg.role === 'user' ? 'prose-invert' : ''}`}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {msg.content}
+                                </ReactMarkdown>
+                            </div>
                         </div>
                     </div>
                 ))}

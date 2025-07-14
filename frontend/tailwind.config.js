@@ -20,7 +20,7 @@ export default {
                 'node-human': '#79d18b',
                 'node-response': '#76c5d1',
                 'node-start': '#ced4da',
-            }
+            },
         },
     },
     plugins: [

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx'
 import './index.css'
+import { Toaster } from 'react-hot-toast';
 
 // We are rendering the app directly without StrictMode for now
 // to ensure maximum stability with the React Flow library and prevent
