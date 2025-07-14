@@ -19,7 +19,6 @@ class WorkflowCallAction(BaseActionExecutor):
         if not sub_workflow:
             return {"step_id": step.step_id, "success": False, "error": f"Sub-workflow with ID {target_id} not found."}
 
-        # --- REFACTORED TO USE THE CORRECT HELPER ---
         sub_context = {}
         if step.input_mappings:
             try:

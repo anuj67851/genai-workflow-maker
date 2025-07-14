@@ -28,14 +28,15 @@ class BaseActionExecutor(ABC):
         """
         Helper to retrieve a value from state based on a placeholder string like '{input.var_name}'.
         """
-        # Improved regex to handle various sources
-        match = re.match(r'\{(state|context|input|env)\.([a-zA-Z0-9_]+)\}', placeholder)
+        # This regex now correctly captures the source and the key as two separate groups.
+        match = re.match(r'\{(state|context|input|env)\.(.+?)}', placeholder.strip())
         if not match:
-            if placeholder == "{query}":
+            if placeholder.strip() == "{query}":
                 return state.get("query")
             return None # Not a recognized placeholder format
 
         source, key = match.groups()
+
         if source == 'state':
             return state.get(key)
         if source == 'context':
@@ -55,9 +56,9 @@ class BaseActionExecutor(ABC):
         if isinstance(obj, list):
             return [self._recursive_fill(item, state) for item in obj]
         if isinstance(obj, str):
-            # If the string is a placeholder, replace it. Otherwise, keep it as is.
-            value = self._get_value_from_state(obj, state)
-            return value if value is not None else obj
+            # This logic is now simpler and correct. It uses the same template filling
+            # for all strings, which handles both full replacement and embedded replacement.
+            return self._fill_prompt_template(obj, state)
         return obj
 
     def _fill_json_template(self, template_str: str, state: Dict[str, Any]) -> Dict:
@@ -69,6 +70,7 @@ class BaseActionExecutor(ABC):
         if not template_str:
             return {}
         try:
+            # The _recursive_fill will handle all template replacements now.
             template_obj = json.loads(template_str)
             return self._recursive_fill(template_obj, state)
         except json.JSONDecodeError:
@@ -77,37 +79,47 @@ class BaseActionExecutor(ABC):
             value = self._get_value_from_state(template_str, state)
             if isinstance(value, dict):
                 return value
-            raise # Re-raise the JSONDecodeError if it's not a valid placeholder
+            raise ValueError(f"Template string is not valid JSON and not a valid placeholder for a dictionary: {template_str}")
+        except Exception as e:
+            # Catch other potential errors during filling
+            raise ValueError(f"Failed to process JSON template: {e}")
+
 
     def _fill_prompt_template(self, template: str, state: Dict[str, Any]) -> str:
         """
-        Utility method to replace placeholders in a simple text prompt.
-        For filling JSON templates, use _fill_json_template.
-        Returns a final string.
+        Utility method to replace all placeholders in a template string.
         """
         if not template:
             return ""
 
-        # This regex finds all occurrences of {source.key} or {query}
+        # The regex to find all valid placeholders
+        placeholder_regex = r'\{(?:state|context|input|env)\.[a-zA-Z0-9_]+_?\}|\{query\}'
+
         def replace_match(match):
             placeholder = match.group(0)
             value = self._get_value_from_state(placeholder, state)
 
-            # If a placeholder's value is not found or is None, replace it with an empty string.
+            # If a placeholder's value is not found or is None, replace it with an empty string
+            # to avoid 'None' appearing in the final string.
             if value is None:
                 return ""
 
-            # If the value is a list of strings (common from file ingestion), join them.
-            if isinstance(value, list) and all(isinstance(i, str) for i in value):
-                return "\n".join(value)
+            # If the value is a complex type (not a string), represent it as a JSON string.
+            # This is important for cases where a whole dict might be injected into a larger string.
+            if not isinstance(value, str):
+                return json.dumps(value, default=str)
 
-            # If the value is another complex type, represent it as a readable JSON string.
-            if isinstance(value, (dict, list)):
-                return json.dumps(value, indent=2, default=str)
+            # If it's a simple string, return it directly.
+            return value
 
-            # For all other types (int, bool, str), just convert to a string.
-            return str(value)
+        # Check if the entire template is just one placeholder.
+        # This is important to correctly return non-string types without converting them to JSON.
+        if re.fullmatch(placeholder_regex, template.strip()):
+            value = self._get_value_from_state(template, state)
+            # If a value is found, return it directly, preserving its type (e.g., dict, list, int).
+            # If not found, return the original template string.
+            return value if value is not None else template
 
-        filled_template = re.sub(r'\{[a-zA-Z0-9_.]+}', replace_match, template)
-
-        return filled_template
+        # If we are here, the template is a string with embedded placeholders.
+        # We use re.sub to replace all occurrences.
+        return re.sub(placeholder_regex, replace_match, template)

@@ -1,3 +1,4 @@
+// Filename: frontend/src\views\WorkflowBuilder.jsx
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactFlow, {
@@ -29,7 +30,6 @@ import FileStorageNode from '../components/nodes/FileStorageNode';
 import HttpRequestNode from '../components/nodes/HttpRequestNode';
 import IntelligentRouterNode from '../components/nodes/IntelligentRouterNode';
 
-
 import useWorkflowStore from '../stores/workflowStore';
 
 // Map action_type to the corresponding component
@@ -54,6 +54,33 @@ const initialNodes = [
     { id: 'start', type: 'startNode', position: { x: 250, y: 50 }, data: {} },
     { id: 'end', type: 'endNode', position: { x: 250, y: 500 }, data: {} },
 ];
+
+// --- Centralized factory for creating new node data ---
+const nodeDefaultsFactory = (type) => {
+    const baseData = {
+        action_type: type,
+        label: `New ${type.replace(/_/g, ' ')}`,
+        description: `A new step to ${type.replace(/_/g, ' ')}.`,
+        prompt_template: '',
+        output_key: '' // Default to empty so user must set it
+    };
+
+    const specificData = {
+        'file_ingestion': { max_files: 1, allowed_file_types: [] },
+        'file_storage': { max_files: 1, allowed_file_types: [], storage_path: 'general' },
+        'workflow_call': { prompt_template: null, input_mappings: '{\n  "key_for_child": "{input.key_from_parent}"\n}' },
+        'vector_db_ingestion': { prompt_template: '{input.documents}', collection_name: 'my_collection', chunk_size: 1000, chunk_overlap: 200, embedding_model: 'text-embedding-3-small' },
+        'vector_db_query': { prompt_template: '{query}', collection_name: 'my_collection', top_k: 5 },
+        'cross_encoder_rerank': { prompt_template: '{input.query_results}', rerank_top_n: 3 },
+        'http_request': { http_method: 'GET', url_template: 'https://api.example.com/data', headers_template: '{\n  "Accept": "application/json"\n}', body_template: '', prompt_template: null },
+        'intelligent_router': { prompt_template: 'Based on the user query, which category does it fall into?', routes: { "option_1": "END", "option_2": "END" }, output_key: null },
+        'human_input': { output_key: 'user_response' },
+        'agentic_tool_use': { output_key: 'tool_output' }
+    };
+
+    return { ...baseData, ...(specificData[type] || {}) };
+};
+
 
 const BuilderComponent = () => {
     const { workflowId } = useParams();
@@ -91,65 +118,17 @@ const BuilderComponent = () => {
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    // --- REFACTOR: Simplified onDrop callback ---
     const onDrop = useCallback((event) => {
         event.preventDefault();
         const type = event.dataTransfer.getData('application/reactflow');
         if (typeof type === 'undefined' || !type) return;
+
         const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
         const position = project({ x: event.clientX - reactFlowBounds.left, y: event.clientY - reactFlowBounds.top });
 
-        // Default data for new nodes
-        const defaultData = {
-            action_type: type,
-            label: `New ${type.replace(/_/g, ' ')}`,
-            description: `A new step to ${type.replace(/_/g, ' ')}.`,
-            prompt_template: '',
-            output_key: `output_${Date.now()}`
-        };
-
-        // Custom initial data for specific node types
-        if(type === 'file_ingestion') {
-            defaultData.max_files = 1;
-            defaultData.allowed_file_types = [];
-        }
-        if (type === 'file_storage') {
-            defaultData.max_files = 1;
-            defaultData.allowed_file_types = []; // e.g., ['.png', '.jpg', '.pdf']
-            defaultData.storage_path = 'general_attachments';
-        }
-        if(type === 'workflow_call') {
-            defaultData.prompt_template = null; // Not needed for workflow_call
-            defaultData.input_mappings = '{\n  "key_for_child": "{input.key_from_parent}"\n}';
-        }
-        if(type === 'vector_db_ingestion') {
-            defaultData.collection_name = 'my_collection';
-            defaultData.chunk_size = 1000;
-            defaultData.chunk_overlap = 200;
-            defaultData.embedding_model = 'text-embedding-3-small';
-        }
-        if(type === 'vector_db_query') {
-            defaultData.collection_name = 'my_collection';
-            defaultData.top_k = 5;
-        }
-        if(type === 'cross_encoder_rerank') {
-            defaultData.rerank_top_n = 3;
-        }
-        if(type === 'http_request') {
-            defaultData.http_method = 'GET';
-            defaultData.url_template = 'https://api.example.com/data';
-            defaultData.headers_template = '{\n  "Accept": "application/json"\n}';
-            defaultData.body_template = '';
-            defaultData.prompt_template = null; // Not used by this node type
-        }
-        if(type === 'intelligent_router') {
-            defaultData.prompt_template = 'Based on the user query, which category does it fall into?';
-            defaultData.routes = {
-                "option_1": "END", // Pre-fill with example routes
-                "option_2": "END",
-            };
-            defaultData.output_key = null; // Router doesn't typically save output
-        }
-
+        // Use the factory to get the default data for the new node
+        const defaultData = nodeDefaultsFactory(type);
 
         const newNode = {
             id: `${type.replace(/_/g, '-')}-${+new Date()}`,
@@ -167,6 +146,8 @@ const BuilderComponent = () => {
     const onSelectionChange = useCallback(({ nodes, edges }) => {
         setSelection({ nodes, edges });
     }, []);
+
+
 
     return (
         <div className="flex h-full w-full">

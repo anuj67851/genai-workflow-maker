@@ -1,3 +1,4 @@
+// Filename: frontend/src/components/ui/InspectorPanel.jsx
 import React, { useEffect, useState } from 'react';
 import useWorkflowStore from '../../stores/workflowStore';
 import { TrashIcon } from '@heroicons/react/24/solid';
@@ -54,8 +55,6 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     // --- Derive the selected node's data from the live store state ---
     const selectedNodeId = selection?.nodes[0]?.id;
     const selectedNode = nodes.find(n => n.id === selectedNodeId);
-    const nodeData = selectedNode?.data || {};
-    const nodeType = nodeData.action_type;
 
     // Effect for fetching external data.
     useEffect(() => {
@@ -78,14 +77,14 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         let finalValue;
 
         if (name === 'tool_names_checkbox') {
-            const currentTools = nodeData.tool_names || [];
+            const currentTools = selectedNode.data.tool_names || [];
             finalValue = checked ? [...currentTools, value] : currentTools.filter(tool => tool !== value);
-            updateNodeData(selectedNode.id, { ...nodeData, tool_names: finalValue });
+            updateNodeData(selectedNode.id, { ...selectedNode.data, tool_names: finalValue });
             return;
         }
 
         finalValue = type === 'checkbox' ? checked : type === 'number' ? (value === '' ? '' : parseInt(value, 10)) : value;
-        updateNodeData(selectedNode.id, { ...nodeData, [name]: finalValue });
+        updateNodeData(selectedNode.id, { ...selectedNode.data, [name]: finalValue });
     };
 
     // Handler to format/finalize data when an input loses focus.
@@ -95,10 +94,10 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
 
         if (name === 'allowed_file_types') {
             const finalValue = value.split(',').map(item => item.trim()).filter(Boolean);
-            updateNodeData(selectedNode.id, { ...nodeData, [name]: finalValue });
+            updateNodeData(selectedNode.id, { ...selectedNode.data, [name]: finalValue });
         } else if (type === 'number' && value === '') {
             const defaultValues = { max_files: 1, rerank_top_n: 3, top_k: 5, chunk_size: 1000, chunk_overlap: 200 };
-            updateNodeData(selectedNode.id, { ...nodeData, [name]: defaultValues[name] || 0 });
+            updateNodeData(selectedNode.id, { ...selectedNode.data, [name]: defaultValues[name] || 0 });
         }
     };
 
@@ -120,8 +119,12 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         );
     }
 
+    const nodeData = selectedNode.data || {};
+    const nodeActionType = nodeData.action_type;
+    const nodeDisplayName = selectedNode.type ? selectedNode.type.replace(/Node$/, '').replace(/_/g, ' ') : 'Node';
+
     const isDeletable = selectedNode && !['start', 'end'].includes(selectedNode.id);
-    const NodeSpecificInspector = nodeInspectorMap[nodeType];
+    const NodeSpecificInspector = nodeInspectorMap[nodeActionType];
 
     // --- RENDER FUNCTIONS FOR COMMON FIELDS ---
     const renderBaseFields = () => (
@@ -165,15 +168,22 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
     return (
         <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
             <div className="flex-grow overflow-y-auto pr-2">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize">
-                    Edit: {nodeData.label || `${nodeType?.replace(/_/g, ' ') ?? ''} Node`}
-                </h3>
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800">
+                        {nodeData.label || `Edit: ${nodeDisplayName}`}
+                    </h3>
+                    {/* --- START OF NEW CODE --- */}
+                    <h4 className="text-sm font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md mt-2 inline-block">
+                        Type: {nodeDisplayName}
+                    </h4>
+                    {/* --- END OF NEW CODE --- */}
+                </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 mt-4">
                     {/* Common fields rendered for all nodes */}
                     {renderBaseFields()}
-                    {NODES_WITH_PROMPT_TEMPLATE.includes(nodeType) && renderPromptTemplateField()}
-                    {NODES_WITH_DATA_SOURCE.includes(nodeType) && renderDataSourceField()}
+                    {NODES_WITH_PROMPT_TEMPLATE.includes(nodeActionType) && renderPromptTemplateField()}
+                    {NODES_WITH_DATA_SOURCE.includes(nodeActionType) && renderDataSourceField()}
 
                     {/* Dynamically render the node-specific inspector */}
                     {NodeSpecificInspector && (
@@ -189,7 +199,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                     )}
 
                     {/* Common output key field */}
-                    {NODES_WITH_OUTPUT_KEY.includes(nodeType) && renderOutputKeyField()}
+                    {NODES_WITH_OUTPUT_KEY.includes(nodeActionType) && renderOutputKeyField()}
                 </div>
             </div>
 
