@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 # Use relative import for the package
 from .genai_workflows import WorkflowEngine, Workflow, WorkflowStep
+from .config import settings
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -26,8 +27,9 @@ async def lifespan(app: FastAPI):
     # Initialize the WorkflowEngine and attach it to the app's state
     # This ensures a single instance is created and shared.
     app.state.engine = WorkflowEngine(
-        openai_api_key=os.getenv("OPENAI_API_KEY", "your-api-key-here"),
-        db_path="workflows.db"
+        openai_api_key=settings.OPENAI_API_KEY,
+        db_path=settings.DATABASE_PATH,
+        default_model=settings.DEFAULT_MODEL
     )
     logging.info("WorkflowEngine initialized.")
 
@@ -143,8 +145,6 @@ def get_available_tools(eng: WorkflowEngine = Depends(get_engine)):
     This is used by the frontend to populate the node inspector.
     """
     try:
-        # The list_tools() method on our new registry already returns the
-        # exact format the frontend will need.
         return eng.tool_registry.list_tools()
     except Exception as e:
         raise HTTPException(
@@ -170,7 +170,7 @@ def rescan_tools(eng: WorkflowEngine = Depends(get_engine)):
             detail=f"An internal error occurred during tool rescanning: {e}"
         )
 
-# --- NEW: Pydantic models for the Mock Email API ---
+# --- Pydantic models for the Mock Email API ---
 class EmailRecipient(BaseModel):
     email: str
 class Personalization(BaseModel):

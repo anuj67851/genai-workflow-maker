@@ -19,6 +19,7 @@ from .actions.file_storage_executor import FileStorageAction
 from .actions.http_request_executor import HttpRequestAction
 from .actions.intelligent_router_executor import IntelligentRouterAction
 from ..tools import ToolRegistry
+from ..config import settings
 
 if TYPE_CHECKING:
     from .core import WorkflowEngine
@@ -40,7 +41,7 @@ class WorkflowExecutor:
         self.logger = logging.getLogger(__name__)
 
         # --- The action registry maps action_type strings to their handler classes ---
-        self.action_executors = {
+        action_classes = {
             "agentic_tool_use": AgenticToolUseAction,
             "condition_check": ConditionCheckAction,
             "cross_encoder_rerank": CrossEncoderRerankAction,
@@ -54,6 +55,12 @@ class WorkflowExecutor:
             "http_request": HttpRequestAction,
             "intelligent_router": IntelligentRouterAction,
         }
+
+        self.action_executors = {
+            action_type: cls(self.client, self.tool_registry, self.engine)
+            for action_type, cls in action_classes.items()
+        }
+        self.logger.info(f"Initialized {len(self.action_executors)} action executors.")
 
     async def execute(self, workflow: Workflow, execution_state: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -121,22 +128,20 @@ class WorkflowExecutor:
 
     async def _execute_step(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        This method now finds the correct action class, instantiates it, and calls its execute method.
+        This method now looks up the pre-instantiated action executor and calls its
+        execute method.
         """
         self.logger.info(f"Dispatching step '{step.step_id}' to handler for type '{step.action_type}'.")
 
-        # Find the specific action class from our registry
-        action_class = self.action_executors.get(step.action_type)
+        action_executor = self.action_executors.get(step.action_type)
 
-        if not action_class:
+        if not action_executor:
             self.logger.warning(f"No action executor found for type: {step.action_type}")
             return {"step_id": step.step_id, "success": False, "error": f"Unknown action type: {step.action_type}"}
 
         try:
-            # Create an instance of the action class, passing all necessary dependencies
-            action_instance = action_class(self.client, self.tool_registry, self.engine)
-            # Call its execute method
-            return await action_instance.execute(step, state)
+            # Call the execute method on the existing instance
+            return await action_executor.execute(step, state)
         except Exception as e:
             self.logger.error(f"Error executing action for step '{step.step_id}': {e}", exc_info=True)
             return {"step_id": step.step_id, "success": False, "error": f"Critical error in action '{step.action_type}': {e}"}
@@ -146,15 +151,9 @@ class WorkflowExecutor:
         """This method remains as it's a general utility for the end of a workflow."""
         prompt = f"Based on the user's query '{state.get('query')}' and the actions taken, provide a concise final summary. History: {json.dumps(state.get('step_history', []), default=str)}"
         try:
-            # Use a default model or get it from configuration
-            default_model = "gpt-4o-mini"
-            # Check if there's a default model configured in the engine
-            if hasattr(self.engine, 'default_model') and self.engine.default_model:
-                default_model = self.engine.default_model
-
             response = await self.client.chat.completions.create(
-                model=default_model, 
-                messages=[{"role": "user", "content": prompt}], 
+                model=settings.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.7
             )
             return response.choices[0].message.content

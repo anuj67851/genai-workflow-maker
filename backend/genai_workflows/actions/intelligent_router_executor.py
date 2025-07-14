@@ -4,6 +4,7 @@ from typing import Dict, Any
 
 from .base_executor import BaseActionExecutor
 from ..workflow import WorkflowStep
+from ...config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,7 @@ Respond with ONLY the name of your chosen option from the list.
 
         try:
             # Use the model specified in the step, or fall back to a default
-            model = step.model_name or "gpt-4o-mini"
-            # If engine has a default model, use that as fallback instead
-            if not step.model_name and hasattr(self.engine, 'default_model') and self.engine.default_model:
-                model = self.engine.default_model
-
+            model = step.model_name or settings.DEFAULT_MODEL
             response = await self.client.chat.completions.create(
                 model=model,
                 messages=messages,

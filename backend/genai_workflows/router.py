@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 from .workflow import Workflow
+from ..config import settings
 
 class WorkflowRouter:
     """Selects the best workflow to handle a user query."""
@@ -37,8 +38,9 @@ class WorkflowRouter:
         """
 
         try:
+            # Use the global settings object for the default model
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=settings.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": match_prompt}],
                 temperature=0.0,
                 max_tokens=50

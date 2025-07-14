@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 
 from .base_executor import BaseActionExecutor
 from ..workflow import WorkflowStep
+from ...config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,8 @@ class AgenticToolUseAction(BaseActionExecutor):
             system_message += " You must respond directly without using any tools."
 
         messages = [{"role": "system", "content": system_message}, {"role": "user", "content": filled_prompt}]
-        completion_kwargs = {"model": "gpt-4o-mini", "messages": messages}
+        model = step.model_name or settings.DEFAULT_MODEL
+        completion_kwargs = {"model": model, "messages": messages}
         if available_tools:
             completion_kwargs["tools"] = available_tools
             completion_kwargs["tool_choice"] = "auto"

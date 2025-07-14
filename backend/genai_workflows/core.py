@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any
 
 from fastapi import UploadFile
 
+from .file_processor import FileProcessor
 from .workflow import Workflow
 from .storage import WorkflowStorage
 from ..tools.registry import ToolRegistry
@@ -43,6 +44,7 @@ class WorkflowEngine:
         self.executor = WorkflowExecutor(self.client, self.tool_registry, self.storage, self)
         self.visualizer = WorkflowVisualizer()
         self.interactive_parser = InteractiveWorkflowParser(self.client, self.tool_registry)
+        self.file_processor = FileProcessor()
 
         # Default model to use for LLM operations if not specified in the step
         self.default_model = default_model
