@@ -79,7 +79,6 @@ The application uses a `.env` file for configuration.
 1.  Navigate to the `root` directory.
 2.  Create a `.env` file by copying the example:
     ```bash
-    cd backend
     cp .env.example .env
     ```
 3.  Open the newly created `.env` file and add your **OpenAI API Key**. The other variables are pre-configured for local development.
@@ -99,15 +98,12 @@ The application uses a `.env` file for configuration.
 Set up and run the Python backend server.
 
 ```bash
-# Still inside the backend directory
-cd backend
-
 # Create and activate a virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
 # Install Python dependencies from the provided requirements file
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 
 # The backend is now ready to run
 ```
@@ -131,7 +127,7 @@ npm install
 You need to have both the backend and frontend servers running simultaneously.
 
 1.  **Start the Backend Server:**
-    In your first terminal (inside the `backend` directory with the virtual environment activated):
+    In your first terminal (inside the `root` directory with the virtual environment activated):
     ```bash
     uvicorn backend.main:app --reload
     ```
