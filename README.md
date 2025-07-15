@@ -68,8 +68,7 @@ Follow these instructions to get the project running on your local machine.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/genai-visual-workflows.git
-cd genai-visual-workflows
+git clone https://github.com/anuj67851/genai-workflow-maker.git
 ```
 
 ### 2. Configure Environment Variables
