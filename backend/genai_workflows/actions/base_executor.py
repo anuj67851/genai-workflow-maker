@@ -116,8 +116,8 @@ class BaseActionExecutor(ABC):
         # This is important to correctly return non-string types without converting them to JSON.
         if re.fullmatch(placeholder_regex, template.strip()):
             value = self._get_value_from_state(template, state)
-            # If a value is found, return it directly, preserving its type (e.g., dict, list, int).
-            # If not found, return the original template string.
+            # --- Return value directly if it is not None, otherwise return the original template ---
+            # This correctly handles cases where the value is False, 0, or an empty string.
             return value if value is not None else template
 
         # If we are here, the template is a string with embedded placeholders.

@@ -12,8 +12,9 @@ from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 # Use relative import for the package
-from .genai_workflows import WorkflowEngine, Workflow, WorkflowStep
+from .genai_workflows import WorkflowEngine, Workflow
 from .config import settings
+from .genai_workflows.database_manager import DatabaseManager
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -56,6 +57,8 @@ class ExecutionByIdRequest(ExecutionRequest):
     workflow_id: int
 class ResumeRequest(BaseModel):
     execution_id: str; user_input: Any
+class AdminSqlRequest(BaseModel):
+    sql: str
 
 # --- Dependency Injection for Engine ---
 # This function now gets the engine instance from the application state.
@@ -153,6 +156,31 @@ def rescan_tools(eng: WorkflowEngine = Depends(get_engine)):
             status_code=500,
             detail=f"An internal error occurred during tool rescanning: {e}"
         )
+
+@app.get("/api/database/schema", tags=["Database Admin"])
+def get_database_schema():
+    """Returns the schema for all tables in the application data database."""
+    try:
+        db_manager = DatabaseManager()
+        return db_manager.list_tables_and_schema()
+    except Exception as e:
+        logging.error(f"Failed to fetch database schema: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/database/execute", tags=["Database Admin"])
+def execute_admin_sql(req: AdminSqlRequest):
+    """Executes a raw SQL command for administrative purposes."""
+    try:
+        db_manager = DatabaseManager()
+        result = db_manager.execute_admin_command(req.sql)
+        if result["status"] == "error":
+            raise HTTPException(status_code=400, detail=result["message"])
+        return result
+    except HTTPException as http_exc:
+        raise http_exc # Re-raise known HTTP exceptions
+    except Exception as e:
+        logging.error(f"Failed to execute admin SQL: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- Pydantic models for the Mock Email API ---
 class EmailRecipient(BaseModel):

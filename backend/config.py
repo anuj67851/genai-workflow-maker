@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # Pydantic will automatically read them from the environment (case-insensitive).
     OPENAI_API_KEY: str
     DATABASE_PATH: str = "workflows.db"
+    DATA_DB_PATH: str = "application_data.db"
     DEFAULT_MODEL: str = "gpt-4o-mini"
 
     # Define directories relative to the backend root

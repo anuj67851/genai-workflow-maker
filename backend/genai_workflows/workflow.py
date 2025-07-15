@@ -50,6 +50,12 @@ class WorkflowStep:
     # Stores a mapping of route names to target step_ids. E.g., {"billing": "ask_billing_question", "technical": "create_tech_ticket"}
     routes: Optional[Dict[str, str]] = field(default_factory=dict)
 
+    # --- Fields for Database nodes ---
+    table_name: Optional[str] = None
+    primary_key_columns: Optional[List[str]] = field(default_factory=list)
+    data_template: Optional[str] = None # JSON string template for save node
+    query_template: Optional[str] = None # SQL string template for query node
+
     def to_dict(self) -> Dict[str, Any]:
         # Exclude fields with default or None values for cleaner serialization, if desired.
         # For now, a simple conversion is robust.
