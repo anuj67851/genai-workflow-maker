@@ -108,7 +108,7 @@ const WorkflowExecutor = () => {
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex my-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`p-3 rounded-lg max-w-lg ${msg.role === 'user' ? 'bg-indigo-500' : 'bg-gray-200'}`}>
-                            <div className={`prose prose-sm max-w-none [&_p]:font-medium ${msg.role === 'user' ? 'prose-invert' : ''}`}>
+                            <div className={`prose prose-sm max-w-none font-sans [&_p]:font-medium ${msg.role === 'user' ? 'prose-invert' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {msg.content}
                                 </ReactMarkdown>

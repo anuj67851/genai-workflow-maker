@@ -42,6 +42,8 @@ export const createFlowSlice = (set, get) => ({
         const newEdge = {
             ...connection,
             id: `edge-${connection.source}-${connection.target}-${connection.sourceHandle || 'default'}`,
+            markerEnd: { type: 'arrowclosed', color: '#6b7280' },
+            style: { strokeWidth: 2 },
         };
         set({
             edges: addEdge(newEdge, get().edges),
