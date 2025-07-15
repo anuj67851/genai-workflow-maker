@@ -1,108 +1,195 @@
-# GenAI Visual Workflow Builder
+# GenAI Visual Workflows
 
-This project provides a full-stack application for visually building, managing, and executing complex, AI-driven workflows. It features a React-based drag-and-drop interface and a powerful FastAPI backend that leverages the `genai_workflows` library.
+**GenAI Visual Workflows** is a powerful, open-source platform for designing, managing, and executing complex workflows driven by Generative AI. It provides a user-friendly, drag-and-drop visual interface to build sophisticated operational flows that leverage Large Language Models (LLMs), custom tools, and external APIs.
 
-## Features
+This application is built with a modern tech stack, featuring a **FastAPI** backend and a **React** frontend, designed for scalability, flexibility, and ease of use.
 
--   **Visual Builder:** A drag-and-drop canvas using React Flow to design workflows.
--   **Node-Based Logic:** Create flows using distinct node types:
-    -   **Tool Node:** Have an LLM agent select and use a specific tool.
-    -   **Condition Node:** Branch your workflow based on dynamic, LLM-evaluated conditions.
-    -   **Human Input Node:** Pause the workflow to ask the user for information.
-    -   **LLM Response Node:** Generate a final, synthesized response to the user.
--   **Context-Aware Editing:** The UI helps you write prompts by showing available input variables from connected steps.
--   **Workflow Executor:** A chat interface to run your saved workflows and interact with them.
--   **FastAPI Backend:** A robust and scalable backend serving a REST API for all workflow operations.
+## ✨ Key Features
 
-## Project Structure
+*   **Visual Workflow Builder:** A drag-and-drop canvas (powered by React Flow) to intuitively design complex workflows with nodes, edges, and branching logic.
+*   **Extensible Node System:** A rich set of pre-built nodes for common tasks:
+    *   **AI & LLM:**
+        *   `Tool/Agent`: An agentic node that can intelligently select from a set of tools to achieve a goal.
+        *   `LLM Response`: Generate direct, context-aware responses from an LLM.
+        *   `Condition Check`: Use an LLM to evaluate complex conditions and control workflow branching (True/False paths).
+        *   `Intelligent Router`: An LLM-powered node that can choose from multiple paths based on context.
+    *   **Data & RAG:**
+        *   `File Ingestion`: Pause a workflow to accept user file uploads and extract text.
+        *   `Vector Ingestion`: Process and ingest text data into a FAISS vector store.
+        *   `Vector Query`: Search a vector store for relevant documents.
+        *   `Re-Rank Results`: Use a Cross-Encoder to improve the relevance of search results.
+    *   **Human-in-the-Loop:**
+        *   `Human Input`: Pause execution to ask the user for text input.
+        *   `File Storage`: Pause to accept user file uploads and save them to a designated path.
+    *   **Core Logic:**
+        *   `API Request`: Make GET, POST, PUT, etc., requests to external APIs with dynamic data.
+        *   `Run Workflow`: Execute other saved workflows as sub-routines, enabling modular design.
+*   **Dynamic Tool Discovery:** Simply drop Python files with `@tool`-decorated functions into a directory, and the system automatically discovers them, generates their schemas, and makes them available to the AI Agent node.
+*   **Hot-Reloading Tools:** A "Rescan Tools" button on the UI allows you to add or update tools without restarting the server.
+*   **Interactive Workflow Executor:** A chat-based interface to run, test, and interact with your workflows in real-time.
+*   **Persistent Storage:** Workflows are saved to a durable SQLite database, preserving your designs.
+*   **Modern, Robust Backend:** Built with FastAPI, Pydantic for data validation, and a clean, decoupled architecture.
+*   **Reactive, Modern Frontend:** Built with React, Zustand for state management, and Tailwind CSS for a polished UI.
 
-```
-.
-├── backend/            # FastAPI application
-└── frontend/           # React application
-```
+## 🏛️ Architecture Overview
 
----
+The project is structured as a monorepo with two main components: `backend` and `frontend`.
 
-## 1. Backend Setup
+*   **`backend/`**: A Python application built with **FastAPI**.
+    *   `main.py`: The main API server, handling HTTP requests for workflows, executions, and tools.
+    *   `config.py`: Centralized application configuration using Pydantic.
+    *   `genai_workflows/`: The core engine of the application.
+        *   `core.py`: `WorkflowEngine` orchestrates all components.
+        *   `executor.py`: The state machine that runs the workflows, dispatching tasks to action-specific executors.
+        *   `actions/`: Contains the logic for each node type (e.g., `LlmResponseAction`, `HttpRequestAction`).
+        *   `storage.py`: Manages the SQLite database for storing workflows.
+    *   `tools/`: Directory for housing all discoverable tools.
+        *   `decorator.py`: Defines the `@tool` decorator.
+        *   `loader.py`, `registry.py`: The system for dynamically finding and loading tools.
+        *   `builtin/`, `custom/`: Drop your tool files here.
 
-The backend is a Python FastAPI server that uses the `genai_workflows` library.
+*   **`frontend/`**: A JavaScript application built with **React** and **Vite**.
+    *   `src/views/`: Contains the main page components (`WorkflowBuilder`, `WorkflowExecutor`).
+    *   `src/components/`: Reusable UI components.
+        *   `nodes/`: Defines the visual appearance and inspector panel for each node type.
+        *   `ui/`: Sidebar, Inspector Panel, etc.
+    *   `src/stores/`: Global state management with **Zustand**.
+    *   `src/hooks/`: Custom React hooks for fetching data and managing chat logic.
+
+## 🛠️ Setup and Installation
+
+Follow these instructions to get the project running on your local machine.
 
 ### Prerequisites
 
--   Python 3.9+
--   An OpenAI API Key
+*   **Python 3.11+** and `pip`.
+*   **Node.js 22+** and `npm`.
 
-### Installation
+### 1. Clone the Repository
 
-1.  **Navigate to the backend directory:**
+```bash
+git clone https://github.com/your-username/genai-visual-workflows.git
+cd genai-visual-workflows
+```
+
+### 2. Configure Environment Variables
+
+The application uses a `.env` file for configuration.
+
+1.  Navigate to the `root` directory.
+2.  Create a `.env` file by copying the example:
     ```bash
     cd backend
+    cp .env.example .env
     ```
+3.  Open the newly created `.env` file and add your **OpenAI API Key**. The other variables are pre-configured for local development.
 
-2.  **Create a virtual environment and activate it:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
-
-3.  **Install the required packages:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Set up your environment variables:**
-    Create a file named `.env` in the `backend` directory and add your OpenAI API key:
-    ```
+    ```dotenv
+    # backend/.env
+    
+    # Required: Add your OpenAI API Key
     OPENAI_API_KEY="sk-..."
+    
+    # Optional: Base URL for the mock email API endpoint
+    INTERNAL_API_BASE_URL="http://localhost:8000"
     ```
 
-### Running the Backend
+### 3. Backend Setup
 
-From the `backend` directory, run the FastAPI server using Uvicorn:
+Set up and run the Python backend server.
 
 ```bash
-uvicorn main:app --reload --port 8000
+# Still inside the backend directory
+cd backend
+
+# Create and activate a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+
+# Install Python dependencies from the provided requirements file
+pip install -r requirements.txt
+
+# The backend is now ready to run
 ```
 
-The API will be available at `http://localhost:8000`. You can see the auto-generated documentation at `http://localhost:8000/docs`.
+### 4. Frontend Setup
 
----
-
-## 2. Frontend Setup
-
-The frontend is a React application built with Vite for a fast development experience.
-
-### Prerequisites
-
--   Node.js 18+ and npm
-
-### Installation
-
-1.  **Navigate to the frontend directory:**
-    ```bash
-    cd frontend
-    ```
-
-2.  **Install the required npm packages:**
-    ```bash
-    npm install
-    ```
-
-### Running the Frontend
-
-From the `frontend` directory, run the development server:
+Set up and run the React frontend. Open a **new terminal window** for this process.
 
 ```bash
-npm run dev
+# Navigate to the frontend directory from the project root
+cd frontend
+
+# Install JavaScript dependencies
+npm install
+
+# The frontend is now ready to run
 ```
 
-The application will be available at `http://localhost:5173`. The frontend is pre-configured to proxy API requests to the backend server running on port 8000.
+## 🚀 Running the Application
 
----
+You need to have both the backend and frontend servers running simultaneously.
 
-## How It Works
+1.  **Start the Backend Server:**
+    In your first terminal (inside the `backend` directory with the virtual environment activated):
+    ```bash
+    uvicorn backend.main:app --reload
+    ```
+    The backend API will be running at `http://localhost:8000`.
 
-1.  **Build:** Use the visual builder on the homepage to drag nodes onto the canvas. Select a node to open the Inspector Panel, where you can define its properties (e.g., write a prompt for a Condition Node). Connect the nodes' handles to define the flow of execution.
-2.  **Save:** Click the "Save Workflow" button. The frontend sends the structure of your graph (nodes and edges) to the backend API (`POST /api/workflows`). The backend translates this graph into a `Workflow` object that the `genai_workflows` engine can understand and saves it to the database.
-3.  **Run:** Navigate to the "Run Workflows" page. Select a workflow and start a conversation. The UI communicates with the backend execution endpoints (`/api/executions/*`) to run the workflow logic, pausing and resuming as needed based on your design.
+2.  **Start the Frontend Server:**
+    In your second terminal (inside the `frontend` directory):
+    ```bash
+    npm run dev
+    ```
+    The frontend development server will start, typically at `http://localhost:5173`. The Vite configuration is already set up to proxy API requests to your backend.
+
+**You can now access the application by navigating to `http://localhost:5173` in your web browser!**
+
+## 📖 How to Use
+
+### Building a Workflow
+1.  Navigate to the **Builder** view.
+2.  On the left sidebar, give your workflow a **Name** and **Description**.
+3.  Drag nodes from the "Nodes" list onto the canvas.
+4.  Connect the nodes by dragging from the handles (circles) at the bottom of one node to the top of another.
+5.  Click on a node to select it. The **Inspector Panel** on the right will show its properties.
+6.  Configure each node's properties, such as prompts, output variable names, and tool selections.
+7.  Once your design is complete, click **Save Workflow**.
+
+### Running a Workflow
+1.  Navigate to the **Run Workflows** view.
+2.  Select a saved workflow from the list.
+3.  A chat interface will appear. Type your initial query to start the workflow.
+4.  Follow the prompts from the workflow. If it pauses for human input or a file upload, the input area will change accordingly.
+
+### Adding a New Custom Tool
+1.  Create a new Python file in `backend/tools/custom/` (e.g., `my_new_tools.py`).
+2.  Inside the file, define a Python function with type hints and a descriptive docstring.
+3.  Add the `@tool` decorator above your function.
+    ```python
+    # backend/tools/custom/my_new_tools.py
+    from backend.tools.decorator import tool
+
+    @tool
+    def check_weather(city: str) -> str:
+        """
+        Checks the current weather for a given city.
+        :param city: The name of the city to check.
+        :return: A string describing the weather.
+        """
+        # (Your implementation here)
+        return f"The weather in {city} is sunny."
+    ```
+4.  In the web UI, click the **Rescan Tools** button in the header.
+5.  Your new `check_weather` tool will now be available for selection in any `Tool/Agent` node.
+
+
+
+### Screenshots
+
+![GenAI Visual Workflows Blank Canvas](assets/blank_canvas.png)
+
+![Workflow Example](assets/workflow_example.png)
+
+![Workflow Execution Mode](assets/execution_mode.png)
