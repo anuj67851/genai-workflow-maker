@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict, Any, TYPE_CHECKING
 
 from .base_executor import BaseActionExecutor
@@ -26,14 +27,17 @@ class DatabaseQueryAction(BaseActionExecutor):
             return {"step_id": step.step_id, "success": False, "error": "Database Query node is missing 'query_template'."}
 
         try:
-            # Fill the SQL template with values from the state
-            # Note: For production systems with untrusted inputs, it's safer to parse
-            # the template and pass variables as `params`. For this trusted environment,
-            # filling the template is acceptable.
-            filled_query = self._fill_prompt_template(query_template, state)
+            # Find all placeholders like {input.var} in the template
+            placeholders = re.findall(r'(\{(?:state|context|input|env)\..+?}|\{query})', query_template)
 
-            # Execute the query
-            query_results = self.db_manager.execute_query(filled_query)
+            # Get the values for these placeholders from the state
+            params = tuple(self._get_value_from_state(p, state) for p in placeholders)
+
+            # Replace the placeholders in the template with standard SQL '?' placeholders
+            sanitized_query = re.sub(r'\{(?:state|context|input|env)\..+?}|\{query}', '?', query_template)
+
+            # Execute the sanitized query with safe parameters
+            query_results = self.db_manager.execute_query(sanitized_query, params)
 
             logger.info(f"Database query for step '{step.step_id}' returned {len(query_results)} rows.")
 

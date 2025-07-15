@@ -1,4 +1,3 @@
-// Filename: frontend/src/components/ui/InspectorPanel.jsx
 import React, { useEffect, useState } from 'react';
 import useWorkflowStore from '../../stores/workflowStore';
 import { TrashIcon } from '@heroicons/react/24/solid';
@@ -14,6 +13,8 @@ import { VectorDBQueryNodeInspector } from '../nodes/VectorDBQueryNode';
 import { CrossEncoderRerankNodeInspector } from '../nodes/CrossEncoderRerankNode';
 import { HttpRequestNodeInspector } from '../nodes/HttpRequestNode';
 import { IntelligentRouterNodeInspector } from '../nodes/IntelligentRouterNode';
+import { DatabaseQueryNodeInspector } from '../nodes/DatabaseQueryNode';
+import { DatabaseSaveNodeInspector } from '../nodes/DatabaseSaveNode';
 
 // Map node types to their specific inspector components
 const nodeInspectorMap = {
@@ -26,6 +27,8 @@ const nodeInspectorMap = {
     cross_encoder_rerank: CrossEncoderRerankNodeInspector,
     http_request: HttpRequestNodeInspector,
     intelligent_router: IntelligentRouterNodeInspector,
+    database_query: DatabaseQueryNodeInspector,
+    database_save: DatabaseSaveNodeInspector,
 };
 
 // --- Helper constants for conditional rendering ---
@@ -37,6 +40,7 @@ const NODES_WITH_DATA_SOURCE = ['vector_db_ingestion', 'cross_encoder_rerank'];
 const NODES_WITH_OUTPUT_KEY = [
     'human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion',
     'file_storage', 'http_request', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank',
+    'database_query',
 ];
 
 const InspectorPanel = ({ selection, currentWorkflowId }) => {
@@ -92,7 +96,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
         if (!selectedNode) return;
         const { name, value, type } = event.target;
 
-        if (name === 'allowed_file_types') {
+        if (name === 'allowed_file_types' || name === 'primary_key_columns') {
             const finalValue = value.split(',').map(item => item.trim()).filter(Boolean);
             updateNodeData(selectedNode.id, { ...selectedNode.data, [name]: finalValue });
         } else if (type === 'number' && value === '') {
@@ -172,11 +176,9 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
                     <h3 className="text-xl font-bold text-gray-800">
                         {nodeData.label || `Edit: ${nodeDisplayName}`}
                     </h3>
-                    {/* --- START OF NEW CODE --- */}
                     <h4 className="text-sm font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md mt-2 inline-block">
                         Type: {nodeDisplayName}
                     </h4>
-                    {/* --- END OF NEW CODE --- */}
                 </div>
 
                 <div className="space-y-4 mt-4">

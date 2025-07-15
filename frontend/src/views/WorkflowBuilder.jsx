@@ -29,6 +29,8 @@ import CrossEncoderRerankNode from '../components/nodes/CrossEncoderRerankNode';
 import FileStorageNode from '../components/nodes/FileStorageNode';
 import HttpRequestNode from '../components/nodes/HttpRequestNode';
 import IntelligentRouterNode from '../components/nodes/IntelligentRouterNode';
+import DatabaseQueryNode from '../components/nodes/DatabaseQueryNode';
+import DatabaseSaveNode from '../components/nodes/DatabaseSaveNode';
 
 import useWorkflowStore from '../stores/workflowStore';
 
@@ -48,6 +50,8 @@ const nodeTypes = {
     cross_encoder_rerankNode: CrossEncoderRerankNode,
     http_requestNode: HttpRequestNode,
     intelligent_routerNode: IntelligentRouterNode,
+    database_queryNode: DatabaseQueryNode,
+    database_saveNode: DatabaseSaveNode,
 };
 
 const initialNodes = [
@@ -75,7 +79,9 @@ const nodeDefaultsFactory = (type) => {
         'http_request': { http_method: 'GET', url_template: 'https://api.example.com/data', headers_template: '{\n  "Accept": "application/json"\n}', body_template: '', prompt_template: null },
         'intelligent_router': { prompt_template: 'Based on the user query, which category does it fall into?', routes: { "option_1": "END", "option_2": "END" }, output_key: null },
         'human_input': { output_key: 'user_response' },
-        'agentic_tool_use': { output_key: 'tool_output' }
+        'agentic_tool_use': { output_key: 'tool_output' },
+        'database_save': { table_name: 'my_table', primary_key_columns: ['id'], data_template: '{\n  "id": "{input.some_id}",\n  "content": "{input.some_content}"\n}' },
+        'database_query': { query_template: "SELECT * FROM my_table WHERE id = '{input.some_id}';", output_key: 'db_results' },
     };
 
     return { ...baseData, ...(specificData[type] || {}) };

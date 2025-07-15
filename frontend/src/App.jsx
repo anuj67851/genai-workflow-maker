@@ -1,11 +1,12 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { PlayCircleIcon, PlusCircleIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
+import { PlayCircleIcon, PlusCircleIcon, Cog8ToothIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import WorkflowBuilder from './views/WorkflowBuilder';
 import WorkflowExecutor from './views/WorkflowExecutor';
 import axios from "axios";
 import {ArrowPathIcon} from "@heroicons/react/24/solid";
+import DataManager from "./views/DataManager.jsx";
 
 function App() {
     const activeLinkClass = "bg-indigo-700 text-white";
@@ -43,6 +44,10 @@ function App() {
                                 <PlayCircleIcon className="h-5 w-5 mr-2" />
                                 Run Workflows
                             </NavLink>
+                            <NavLink to="/data" className={({ isActive }) => `${isActive ? activeLinkClass : inactiveLinkClass} px-3 py-2 rounded-md text-sm font-medium flex items-center`}>
+                                <CpuChipIcon className="h-5 w-5 mr-2" />
+                                Data Manager
+                            </NavLink>
                             <button onClick={handleRescanTools} className={buttonClass}>
                                 <ArrowPathIcon className="h-5 w-5 mr-2" />
                                 Rescan Tools
@@ -57,6 +62,7 @@ function App() {
                     <Route path="/" element={<WorkflowBuilder />} />
                     <Route path="/builder/:workflowId" element={<WorkflowBuilder />} />
                     <Route path="/run" element={<WorkflowExecutor />} />
+                    <Route path="/data" element={<DataManager />} />
                 </Routes>
             </main>
         </div>

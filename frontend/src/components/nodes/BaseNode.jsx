@@ -14,6 +14,8 @@ const typeStyles = {
     cross_encoder_rerank: { bg: 'bg-node-vector', border: 'border-node-vector', title: 'Re-Rank Results' },
     http_request: { bg: 'bg-node-api', border: 'border-node-api', title: 'API Request' },
     intelligent_router: { bg: 'bg-node-router', border: 'border-node-router', title: 'Intelligent Router' },
+    database_query: { bg: 'bg-node-database', border: 'border-node-database', title: 'Database Query' },
+    database_save: { bg: 'bg-node-database', border: 'border-node-database', title: 'Database Save' },
     default: { bg: 'bg-gray-200', border: 'border-gray-400', title: 'Node' },
 };
 
