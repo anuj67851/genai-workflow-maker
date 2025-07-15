@@ -180,7 +180,11 @@ You need to have both the backend and frontend servers running simultaneously.
 4.  In the web UI, click the **Rescan Tools** button in the header.
 5.  Your new `check_weather` tool will now be available for selection in any `Tool/Agent` node.
 
+### WIP
 
+1. Interactive parser -  Converting natural language to workflow
+2. Visualizer - Mermaid workflow visualizer
+3. Workflow Router - Load and execute workflows dynamically based on user query
 
 ### Screenshots
 
