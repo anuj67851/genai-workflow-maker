@@ -18,6 +18,8 @@ This application is built with a modern tech stack, featuring a **FastAPI** back
         *   `Vector Ingestion`: Process and ingest text data into a FAISS vector store.
         *   `Vector Query`: Search a vector store for relevant documents.
         *   `Re-Rank Results`: Use a Cross-Encoder to improve the relevance of search results.
+        *   `Database Ingestion`: Process and ingest data into a SQLite store.
+        *   `Database Query`: Search database store for relevant results.
     *   **Human-in-the-Loop:**
         *   `Human Input`: Pause execution to ask the user for text input.
         *   `File Storage`: Pause to accept user file uploads and save them to a designated path.
