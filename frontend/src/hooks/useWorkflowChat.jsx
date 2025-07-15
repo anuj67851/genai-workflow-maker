@@ -37,7 +37,11 @@ export const useWorkflowChat = (selectedWorkflow) => {
     }, [selectedWorkflow]);
 
     const processApiResponse = (data) => {
-        const responseText = data.response || data.error || "An unknown error occurred.";
+        let responseText = data.response || data.error || "An unknown error occurred.";
+        if (typeof responseText === 'object') {
+            // Pretty-print the JSON object for better readability in the chat
+            responseText = "```json\n" + JSON.stringify(responseText, null, 2) + "\n```";
+        }
         setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
 
         if (data.status === 'awaiting_input') {

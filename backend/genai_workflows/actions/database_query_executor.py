@@ -27,16 +27,22 @@ class DatabaseQueryAction(BaseActionExecutor):
             return {"step_id": step.step_id, "success": False, "error": "Database Query node is missing 'query_template'."}
 
         try:
-            # Find all placeholders like {input.var} in the template
-            placeholders = re.findall(r'(\{(?:state|context|input|env)\..+?}|\{query})', query_template)
+            # 1. Define the core pattern for finding placeholders like {input.var}
+            core_placeholder_pattern = r'\{(?:state|context|input|env)\.[a-zA-Z0-9_]+?\}|\{query\}'
 
-            # Get the values for these placeholders from the state
-            params = tuple(self._get_value_from_state(p, state) for p in placeholders)
+            # 2. Find all placeholders to get their corresponding values for the params tuple
+            placeholders_to_fill = re.findall(core_placeholder_pattern, query_template)
+            params = tuple(self._get_value_from_state(p, state) for p in placeholders_to_fill)
 
-            # Replace the placeholders in the template with standard SQL '?' placeholders
-            sanitized_query = re.sub(r'\{(?:state|context|input|env)\..+?}|\{query}', '?', query_template)
+            # 3. Define a new, more robust pattern for substitution.
+            # This pattern finds the placeholder AND any surrounding single/double quotes.
+            # This is what prevents the ... = '?' error.
+            substitution_pattern = rf"['\"]?({core_placeholder_pattern})['\"]?"
 
-            # Execute the sanitized query with safe parameters
+            # 4. Replace the full pattern (e.g., '{input.var}') with a single '?'
+            sanitized_query = re.sub(substitution_pattern, '?', query_template)
+
+            # 5. Execute the sanitized query with safe parameters
             query_results = self.db_manager.execute_query(sanitized_query, params)
 
             logger.info(f"Database query for step '{step.step_id}' returned {len(query_results)} rows.")

@@ -28,6 +28,20 @@ const DatabaseSaveNode = ({ data, selected }) => {
                         {pk_string}
                     </span>
                 </div>
+
+                {data.output_key ? (
+                    <div className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                        <span className="font-semibold">Saves to:</span>
+                        <span className="font-mono bg-green-100 text-green-800 px-1 rounded ml-1">
+                            {data.output_key}
+                        </span>
+                    </div>
+                ) : (
+                    <div className="text-xs text-red-500 pt-2 border-t border-gray-200">
+                        <span className="font-semibold">Warning:</span>
+                        <span> Output key not set.</span>
+                    </div>
+                )}
             </div>
         </BaseNode>
     );

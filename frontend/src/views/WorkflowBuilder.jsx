@@ -80,7 +80,7 @@ const nodeDefaultsFactory = (type) => {
         'intelligent_router': { prompt_template: 'Based on the user query, which category does it fall into?', routes: { "option_1": "END", "option_2": "END" }, output_key: null },
         'human_input': { output_key: 'user_response' },
         'agentic_tool_use': { output_key: 'tool_output' },
-        'database_save': { table_name: 'my_table', primary_key_columns: ['id'], data_template: '{\n  "id": "{input.some_id}",\n  "content": "{input.some_content}"\n}' },
+        'database_save': { table_name: 'my_table', primary_key_columns: ['id'], data_template: '{\n  "id": "{input.some_id}",\n  "content": "{input.some_content}"\n}', output_key: 'db_save_result' },
         'database_query': { query_template: "SELECT * FROM my_table WHERE id = '{input.some_id}';", output_key: 'db_results' },
     };
 

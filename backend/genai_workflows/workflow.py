@@ -152,10 +152,16 @@ class Workflow:
 
             connections = edges_by_source.get(node_id, {})
 
-            # For intelligent_router, the routes are already mapped on the frontend
-            # and don't need special on_success/on_failure handling here.
             if node_type == "intelligent_router":
-                pass # The routes are already in step_data['routes']
+                # Get the routes dict from the node's data (e.g., {"query": "END", "create": "END"})
+                current_routes = step_data.get('routes', {})
+                updated_routes = {}
+                # For each defined route name, find its actual connection target from the edges
+                for route_name in current_routes.keys():
+                    # The edge's sourceHandle IS the route name. Find its target.
+                    target_node_id = connections.get(route_name, "END")
+                    updated_routes[route_name] = target_node_id
+                step_data['routes'] = updated_routes
             elif node_type == "condition_check":
                 # Explicit handles for condition nodes
                 step_data["on_success"] = connections.get("onSuccess", "END")

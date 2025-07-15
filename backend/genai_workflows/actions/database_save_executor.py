@@ -38,15 +38,18 @@ class DatabaseSaveAction(BaseActionExecutor):
             if not isinstance(data_to_save, dict):
                 raise ValueError("The resolved 'data_template' must be a dictionary (JSON object).")
 
-            # Perform the upsert operation
-            self.db_manager.upsert_data(table_name, data_to_save, pk_columns)
+            rows_affected = self.db_manager.upsert_data(table_name, data_to_save, pk_columns)
 
-            output_message = f"Successfully saved data to table '{table_name}'."
+            output_data = {
+                "message": f"Successfully saved data to table '{table_name}'.",
+                "rows_affected": rows_affected
+            }
+
             return {
                 "step_id": step.step_id,
                 "success": True,
                 "type": "database_save",
-                "output": output_message
+                "output": output_data
             }
 
         except ValueError as ve:

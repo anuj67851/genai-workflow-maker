@@ -40,7 +40,7 @@ const NODES_WITH_DATA_SOURCE = ['vector_db_ingestion', 'cross_encoder_rerank'];
 const NODES_WITH_OUTPUT_KEY = [
     'human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion',
     'file_storage', 'http_request', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank',
-    'database_query',
+    'database_query', 'database_save',
 ];
 
 const InspectorPanel = ({ selection, currentWorkflowId }) => {

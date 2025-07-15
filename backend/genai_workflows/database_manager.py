@@ -81,7 +81,11 @@ class DatabaseManager:
                 cursor = conn.cursor()
                 cursor.execute(sql, params)
                 conn.commit()
-            logger.info(f"Upsert successful for table '{table_name}'.")
+                rows_affected = cursor.rowcount
+                guaranteed_rows_affected = max(0, rows_affected) if rows_affected is not None else 0
+
+                logger.info(f"Upsert successful for table '{table_name}'. Driver rowcount: {rows_affected}, Guaranteed rows_affected: {guaranteed_rows_affected}")
+                return guaranteed_rows_affected
         except sqlite3.Error as e:
             logger.error(f"Database upsert failed: {e}", exc_info=True)
             raise e
