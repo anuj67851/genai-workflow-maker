@@ -33,6 +33,7 @@ code {
     .bg-node-api { @apply bg-slate-100; }
     .bg-node-router { @apply bg-fuchsia-100; }
     .bg-node-database { @apply bg-sky-100; }
+    .bg-node-direct-tool-call { @apply bg-yellow-100; }
 
 
     /* Define border colors */
@@ -47,6 +48,7 @@ code {
     .border-node-api { @apply border-slate-300; }
     .border-node-router { @apply border-fuchsia-300; }
     .border-node-database { @apply border-sky-300; }
+    .border-node-direct-tool-call { @apply border-yellow-300; }
 }
 
 

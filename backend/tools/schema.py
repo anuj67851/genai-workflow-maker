@@ -128,7 +128,7 @@ class SchemaGenerator:
             if line.startswith(":param"):
                 parts = line.split(":", 2)
                 if len(parts) == 3:
-                    param_name = parts[1].split(" ")[0]
+                    param_name = parts[1].strip().split()[1]
                     param_desc = parts[2].strip()
                     params[param_name] = param_desc
         return params

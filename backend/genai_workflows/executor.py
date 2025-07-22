@@ -22,6 +22,7 @@ from .actions.http_request_executor import HttpRequestAction
 from .actions.intelligent_router_executor import IntelligentRouterAction
 from .actions.database_save_executor import DatabaseSaveAction
 from .actions.database_query_executor import DatabaseQueryAction
+from .actions.direct_tool_call_executor import DirectToolCallAction
 
 if TYPE_CHECKING:
     from .core import WorkflowEngine
@@ -58,6 +59,7 @@ class WorkflowExecutor:
             "intelligent_router": IntelligentRouterAction,
             "database_save": DatabaseSaveAction,
             "database_query": DatabaseQueryAction,
+            "direct_tool_call": DirectToolCallAction,
         }
 
         self.action_executors = {

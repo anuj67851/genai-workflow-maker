@@ -31,6 +31,7 @@ import HttpRequestNode from '../components/nodes/HttpRequestNode';
 import IntelligentRouterNode from '../components/nodes/IntelligentRouterNode';
 import DatabaseQueryNode from '../components/nodes/DatabaseQueryNode';
 import DatabaseSaveNode from '../components/nodes/DatabaseSaveNode';
+import DirectToolCallNode from "../components/nodes/DirectToolCallNode.jsx";
 
 import useWorkflowStore from '../stores/workflowStore';
 
@@ -52,6 +53,7 @@ const nodeTypes = {
     intelligent_routerNode: IntelligentRouterNode,
     database_queryNode: DatabaseQueryNode,
     database_saveNode: DatabaseSaveNode,
+    direct_tool_callNode: DirectToolCallNode,
 };
 
 const initialNodes = [
@@ -82,6 +84,7 @@ const nodeDefaultsFactory = (type) => {
         'agentic_tool_use': { output_key: 'tool_output' },
         'database_save': { table_name: 'my_table', primary_key_columns: ['id'], data_template: '{\n  "id": "{input.some_id}",\n  "content": "{input.some_content}"\n}', output_key: 'db_save_result' },
         'database_query': { query_template: "SELECT * FROM my_table WHERE id = '{input.some_id}';", output_key: 'db_results' },
+        'direct_tool_call': { target_tool_name: '', data_template: '{\n  "arg_name": "{input.variable}"\n}', output_key: 'direct_tool_output' },
     };
 
     return { ...baseData, ...(specificData[type] || {}) };

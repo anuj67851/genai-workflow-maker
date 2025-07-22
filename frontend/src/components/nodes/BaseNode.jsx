@@ -16,6 +16,7 @@ const typeStyles = {
     intelligent_router: { bg: 'bg-node-router', border: 'border-node-router', title: 'Intelligent Router' },
     database_query: { bg: 'bg-node-database', border: 'border-node-database', title: 'Database Query' },
     database_save: { bg: 'bg-node-database', border: 'border-node-database', title: 'Database Save' },
+    direct_tool_call: { bg: 'bg-node-direct-tool-call', border: 'border-node-direct-tool-call', title: 'Direct Tool Call' },
     default: { bg: 'bg-gray-200', border: 'border-gray-400', title: 'Node' },
 };
 

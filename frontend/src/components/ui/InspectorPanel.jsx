@@ -15,6 +15,7 @@ import { HttpRequestNodeInspector } from '../nodes/HttpRequestNode';
 import { IntelligentRouterNodeInspector } from '../nodes/IntelligentRouterNode';
 import { DatabaseQueryNodeInspector } from '../nodes/DatabaseQueryNode';
 import { DatabaseSaveNodeInspector } from '../nodes/DatabaseSaveNode';
+import { DirectToolCallNodeInspector } from "../nodes/DirectToolCallNode.jsx";
 
 // Map node types to their specific inspector components
 const nodeInspectorMap = {
@@ -29,6 +30,7 @@ const nodeInspectorMap = {
     intelligent_router: IntelligentRouterNodeInspector,
     database_query: DatabaseQueryNodeInspector,
     database_save: DatabaseSaveNodeInspector,
+    direct_tool_call: DirectToolCallNodeInspector,
 };
 
 // --- Helper constants for conditional rendering ---
@@ -40,7 +42,7 @@ const NODES_WITH_DATA_SOURCE = ['vector_db_ingestion', 'cross_encoder_rerank'];
 const NODES_WITH_OUTPUT_KEY = [
     'human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion',
     'file_storage', 'http_request', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank',
-    'database_query', 'database_save',
+    'database_query', 'database_save', 'direct_tool_call',
 ];
 
 const InspectorPanel = ({ selection, currentWorkflowId }) => {

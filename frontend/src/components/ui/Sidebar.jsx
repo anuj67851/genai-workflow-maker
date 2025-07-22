@@ -14,6 +14,7 @@ import {
     ServerStackIcon,
     ShareIcon,
     ArrowDownOnSquareStackIcon,
+    BoltIcon,
 } from '@heroicons/react/24/outline';
 import useWorkflowStore from '../../stores/workflowStore';
 import { toast } from 'react-hot-toast';
@@ -43,6 +44,7 @@ const Sidebar = () => {
         { type: 'cross_encoder_rerank', label: 'Rerank Results', icon: <ArrowsUpDownIcon className="h-6 w-6 text-teal-700" /> },
         { type: 'http_request', label: 'API Request', icon: <ServerStackIcon className="h-6 w-6 text-slate-700" /> },
         { type: 'intelligent_router', label: 'Intelligent Router', icon: <ShareIcon className="h-6 w-6 text-fuchsia-700" /> },
+        { type: 'direct_tool_call', label: 'Direct Tool Call', icon: <BoltIcon className="h-6 w-6 text-yellow-700" /> },
     ];
 
     const handleSaveWorkflow = async () => {
