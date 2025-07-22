@@ -118,7 +118,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
 
     if (!selectedNode) {
         return (
-            <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel">
+            <aside className="h-full w-full bg-gray-50 p-6 border-l border-gray-200 inspector-panel">
                 <h3 className="text-xl font-bold text-gray-800">Properties</h3>
                 <p className="mt-2 text-sm text-gray-500">Select a node on the canvas to view and edit its properties.</p>
             </aside>
@@ -172,7 +172,7 @@ const InspectorPanel = ({ selection, currentWorkflowId }) => {
 
     // --- Main component return ---
     return (
-        <aside className="w-96 bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
+        <aside className="h-full w-full bg-gray-50 p-6 border-l border-gray-200 inspector-panel flex flex-col">
             <div className="flex-grow overflow-y-auto pr-2">
                 <div>
                     <h3 className="text-xl font-bold text-gray-800">

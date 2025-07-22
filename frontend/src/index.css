@@ -86,3 +86,18 @@ code {
 .inspector-panel input, .inspector-panel textarea, .inspector-panel select {
     @apply w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500;
 }
+
+/* --- STYLES FOR RESIZABLE PANELS --- */
+.resize-handle {
+    @apply w-1 bg-gray-200 cursor-col-resize flex items-center justify-center;
+    transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover,
+.resize-handle[data-dragging='true'] {
+    @apply bg-indigo-200;
+}
+
+.resize-handle-line {
+    @apply w-0.5 h-8 bg-gray-400 rounded-full;
+}

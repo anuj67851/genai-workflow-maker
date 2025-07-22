@@ -10,6 +10,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import Sidebar from '../components/ui/Sidebar';
 import InspectorPanel from '../components/ui/InspectorPanel';
@@ -159,31 +160,48 @@ const BuilderComponent = () => {
 
 
     return (
-        <div className="flex h-full w-full">
-            <Sidebar />
-            <div className="flex-grow h-full" ref={reactFlowWrapper}>
-                <ReactFlow
-                    nodes={nodes.map(n => ({ ...n, key: `${n.id}-${n.data._version || 0}` }))}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    onDrop={onDrop}
-                    onDragOver={onDragOver}
-                    onPaneClick={onPaneClick}
-                    onSelectionChange={onSelectionChange}
-                    deleteKeyCode={['Backspace', 'Delete']}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.2 }}
-                >
-                    <Controls />
-                    <MiniMap />
-                    <Background variant="dots" gap={12} size={1} />
-                </ReactFlow>
-            </div>
-            <InspectorPanel key={selection?.nodes[0]?.id || 'no-selection'} selection={selection} currentWorkflowId={workflowId} />
-        </div>
+        <PanelGroup direction="horizontal" className="h-full w-full">
+            <Panel defaultSize={15} minSize={15} collapsible={true}>
+                <Sidebar />
+            </Panel>
+
+            <PanelResizeHandle className="resize-handle">
+                <div className="resize-handle-line" />
+            </PanelResizeHandle>
+
+            <Panel defaultSize={55} minSize={30}>
+                <div className="flex-grow h-full" ref={reactFlowWrapper}>
+                    <ReactFlow
+                        nodes={nodes.map(n => ({ ...n, key: `${n.id}-${n.data._version || 0}` }))}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        onDrop={onDrop}
+                        onDragOver={onDragOver}
+                        onPaneClick={onPaneClick}
+                        onSelectionChange={onSelectionChange}
+                        deleteKeyCode={['Backspace', 'Delete']}
+                        nodeTypes={nodeTypes}
+                        fitView
+                        fitViewOptions={{ padding: 0.2 }}
+                    >
+                        <Controls />
+                        <MiniMap />
+                        <Background variant="dots" gap={12} size={1} />
+                    </ReactFlow>
+                </div>
+            </Panel>
+
+            <PanelResizeHandle className="resize-handle">
+                <div className="resize-handle-line" />
+            </PanelResizeHandle>
+
+            <Panel defaultSize={20} minSize={20} collapsible={true}>
+                <InspectorPanel key={selection?.nodes[0]?.id || 'no-selection'} selection={selection} currentWorkflowId={workflowId} />
+            </Panel>
+
+        </PanelGroup>
     );
 };
 
