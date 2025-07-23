@@ -1,3 +1,6 @@
+import shlex
+from typing import List
+
 from backend.tools.decorator import tool
 from datetime import datetime
 
@@ -39,3 +42,29 @@ def simple_calculator(expression: str) -> str:
         return f"The result of '{expression}' is {result}."
     except Exception as e:
         return f"Error evaluating expression: {e}"
+
+@tool(name="split_string_to_list")
+def split_string_to_list(input_string: str, delimiter: str = ',') -> List[str]:
+    """
+    Splits a string into a list of strings based on a delimiter.
+    It also cleans up whitespace and handles quoted text.
+
+    :param input_string: The string to be split (e.g., "Alice, Bob, 'Charlie Day'").
+    :param delimiter: The character to split the string by. Defaults to a comma.
+    :return: A list of clean strings.
+    """
+    # Use shlex for robust splitting that handles quotes
+    splitter = shlex.shlex(input_string, posix=True)
+    splitter.whitespace = delimiter
+    splitter.whitespace_split = True
+    return [s.strip() for s in splitter]
+
+@tool(name="greet_person_tool")
+def greet(name: str) -> str:
+    """
+    Generates a simple greeting for a given name.
+
+    :param name: The name of the person to greet.
+    :return: A greeting string.
+    """
+    return f"Hello, {name}! Welcome to the workflow."

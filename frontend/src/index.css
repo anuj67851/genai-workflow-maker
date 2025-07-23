@@ -34,6 +34,7 @@ code {
     .bg-node-router { @apply bg-fuchsia-100; }
     .bg-node-database { @apply bg-sky-100; }
     .bg-node-direct-tool-call { @apply bg-yellow-100; }
+    .bg-node-loop { @apply bg-rose-100; }
 
 
     /* Define border colors */
@@ -49,6 +50,7 @@ code {
     .border-node-router { @apply border-fuchsia-300; }
     .border-node-database { @apply border-sky-300; }
     .border-node-direct-tool-call { @apply border-yellow-300; }
+    .border-node-loop { @apply border-rose-300; }
 }
 
 

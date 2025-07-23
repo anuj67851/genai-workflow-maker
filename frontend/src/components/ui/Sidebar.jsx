@@ -18,9 +18,12 @@ import {
     ArrowDownOnSquareStackIcon,
     BoltIcon,
     VariableIcon,
+    ArrowPathIcon,
+    ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline';
 import AccordionItem from './AccordionItem';
 import VariableExplorer from './VariableExplorer';
+import axios from "axios";
 
 const Sidebar = () => {
     const { workflowName, setWorkflowName, workflowDescription, setWorkflowDescription } = useWorkflowStore();
@@ -52,6 +55,8 @@ const Sidebar = () => {
         { type: 'cross_encoder_rerank', label: 'Rerank Results', icon: <ArrowsUpDownIcon className="h-6 w-6 text-teal-700" /> },
         { type: 'http_request', label: 'API Request', icon: <ServerStackIcon className="h-6 w-6 text-slate-700" /> },
         { type: 'intelligent_router', label: 'Intelligent Router', icon: <ShareIcon className="h-6 w-6 text-fuchsia-700" /> },
+        { type: 'start_loop', label: 'Start Loop', icon: <ArrowPathIcon className="h-6 w-6 text-rose-700" /> },
+        { type: 'end_loop', label: 'End Loop', icon: <ArrowUturnLeftIcon className="h-6 w-6 text-rose-700" /> },
     ];
 
     const handleSaveWorkflow = async () => {

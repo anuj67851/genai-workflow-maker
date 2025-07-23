@@ -59,6 +59,11 @@ class WorkflowStep:
     # --- Fields for 'direct_tool_call' ---
     target_tool_name: Optional[str] = None
 
+    # --- Fields for 'start_loop' ---
+    input_collection_variable: Optional[str] = None
+    current_item_output_key: Optional[str] = None
+    loop_body_start_step_id: Optional[str] = None # This will be populated by from_graph
+
     def to_dict(self) -> Dict[str, Any]:
         # Exclude fields with default or None values for cleaner serialization, if desired.
         # For now, a simple conversion is robust.
@@ -127,13 +132,32 @@ class Workflow:
         """
         Constructs a Workflow object from frontend graph data (nodes and edges).
         """
+        node_types_by_id = {node['id']: node.get('type', '').replace('Node', '') for node in nodes}
+
         edges_by_source = {}
         for edge in edges:
             source_id = edge.get("source")
             source_handle = edge.get("sourceHandle") or "default"
+            source_node_type = node_types_by_id.get(source_id)
+
             if source_id not in edges_by_source:
                 edges_by_source[source_id] = {}
-            edges_by_source[source_id][source_handle] = edge.get("target")
+
+            # Special handling for our start_loop node's unique handles
+            if source_node_type == 'start_loop':
+                if source_handle == 'loopBody':
+                    # This handle defines the start of the loop's body.
+                    edges_by_source[source_id]['loopBody'] = edge.get("target")
+                elif source_handle == 'onSuccess':
+                    # This handle defines the path after the loop completes.
+                    edges_by_source[source_id]['onSuccess'] = edge.get("target")
+                elif source_handle == 'onFailure':
+                    # The standard failure path
+                    edges_by_source[source_id]['onFailure'] = edge.get("target")
+            else:
+                # Standard handle processing for all other nodes
+                edges_by_source[source_id][source_handle] = edge.get("target")
+
 
         backend_steps = {}
         for node in nodes:
@@ -155,7 +179,11 @@ class Workflow:
 
             connections = edges_by_source.get(node_id, {})
 
-            if node_type == "intelligent_router":
+            if node_type == "start_loop":
+                step_data["loop_body_start_step_id"] = connections.get("loopBody", "END")
+                step_data["on_success"] = connections.get("onSuccess", "END")
+                step_data["on_failure"] = connections.get("onFailure") # Can be None
+            elif node_type == "intelligent_router":
                 # Get the routes dict from the node's data (e.g., {"query": "END", "create": "END"})
                 current_routes = step_data.get('routes', {})
                 updated_routes = {}
@@ -179,6 +207,8 @@ class Workflow:
             # Normalize 'end' to 'END' for consistency
             if step_data.get("on_success") == "end": step_data["on_success"] = "END"
             if step_data.get("on_failure") == "end": step_data["on_failure"] = "END"
+            if step_data.get("loop_body_start_step_id") == "end": step_data["loop_body_start_step_id"] = "END"
+
 
             # Remove any frontend-specific helper properties
             step_data.pop('_version', None)

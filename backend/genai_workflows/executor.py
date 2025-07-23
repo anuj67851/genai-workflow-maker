@@ -23,6 +23,8 @@ from .actions.intelligent_router_executor import IntelligentRouterAction
 from .actions.database_save_executor import DatabaseSaveAction
 from .actions.database_query_executor import DatabaseQueryAction
 from .actions.direct_tool_call_executor import DirectToolCallAction
+from .actions.start_loop_executor import StartLoopAction
+from .actions.end_loop_executor import EndLoopAction
 
 if TYPE_CHECKING:
     from .core import WorkflowEngine
@@ -60,6 +62,8 @@ class WorkflowExecutor:
             "database_save": DatabaseSaveAction,
             "database_query": DatabaseQueryAction,
             "direct_tool_call": DirectToolCallAction,
+            "start_loop": StartLoopAction,
+            "end_loop": EndLoopAction,
         }
 
         self.action_executors = {
@@ -75,6 +79,9 @@ class WorkflowExecutor:
         """
         self.logger.info(f"Executing workflow '{workflow.name}' from step '{execution_state['current_step_id']}'")
 
+        # The stack will hold the step_id of the 'start_loop' node that initiated a sub-graph execution.
+        loop_context_stack = []
+
         try:
             while execution_state["current_step_id"] and execution_state["current_step_id"] != 'END':
                 step = workflow.get_step(execution_state["current_step_id"])
@@ -86,7 +93,26 @@ class WorkflowExecutor:
                 # --- Delegate to the appropriate action class ---
                 result = await self._execute_step(step, execution_state)
 
-                # The rest of the loop logic remains the same...
+                if result.get("status") == "start_loop_iteration":
+                    # The StartLoopAction wants to begin a sub-graph execution.
+                    loop_context_stack.append(step.step_id)
+                    execution_state["current_step_id"] = result.get("next_step_override")
+                    self.logger.info(f"Entering loop body. Pushed '{step.step_id}' to context stack. Next step: '{execution_state['current_step_id']}'")
+                    continue # Immediately start the loop body without storing output yet
+
+                if result.get("status") == "loop_iteration_complete":
+                    # The EndLoopAction signals the end of an iteration.
+                    if not loop_context_stack:
+                        error_msg = "Encountered an 'end_loop' node without a 'start_loop' context. Check workflow structure."
+                        return {"status": "failed", "error": error_msg, "state": execution_state}
+
+                    # Return control to the 'start_loop' node that is on top of the stack.
+                    start_loop_step_id = loop_context_stack.pop()
+                    execution_state["current_step_id"] = start_loop_step_id
+                    execution_state["step_history"].append(result) # Record the end_loop result for aggregation
+                    self.logger.info(f"Exiting loop body. Popped context. Returning to '{start_loop_step_id}' to continue loop.")
+                    continue # Immediately jump back to the start_loop node
+
                 if result.get("status") in ["awaiting_input", "awaiting_file_upload"]:
                     response_payload = {
                         "status": "paused", "state": execution_state, "response": result.get("prompt"),

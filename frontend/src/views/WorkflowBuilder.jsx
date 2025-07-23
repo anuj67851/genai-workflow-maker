@@ -33,6 +33,8 @@ import IntelligentRouterNode from '../components/nodes/IntelligentRouterNode';
 import DatabaseQueryNode from '../components/nodes/DatabaseQueryNode';
 import DatabaseSaveNode from '../components/nodes/DatabaseSaveNode';
 import DirectToolCallNode from "../components/nodes/DirectToolCallNode.jsx";
+import StartLoopNode from "../components/nodes/StartLoopNode.jsx";
+import EndLoopNode from "../components/nodes/EndLoopNode.jsx";
 
 import useWorkflowStore from '../stores/workflowStore';
 
@@ -55,6 +57,8 @@ const nodeTypes = {
     database_queryNode: DatabaseQueryNode,
     database_saveNode: DatabaseSaveNode,
     direct_tool_callNode: DirectToolCallNode,
+    start_loopNode: StartLoopNode,
+    end_loopNode: EndLoopNode,
 };
 
 const initialNodes = [
@@ -86,6 +90,8 @@ const nodeDefaultsFactory = (type) => {
         'database_save': { table_name: 'my_table', primary_key_columns: ['id'], data_template: '{\n  "id": "{input.some_id}",\n  "content": "{input.some_content}"\n}', output_key: 'db_save_result' },
         'database_query': { query_template: "SELECT * FROM my_table WHERE id = '{input.some_id}';", output_key: 'db_results' },
         'direct_tool_call': { target_tool_name: '', data_template: '{\n  "arg_name": "{input.variable}"\n}', output_key: 'direct_tool_output' },
+        'start_loop': { input_collection_variable: '{input.my_list}', current_item_output_key: 'currentItem', output_key: 'loop_results' },
+        'end_loop': { output_key: null, prompt_template: null }, // End loop has no config
     };
 
     return { ...baseData, ...(specificData[type] || {}) };

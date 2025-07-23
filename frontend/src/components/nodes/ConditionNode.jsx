@@ -1,6 +1,7 @@
 import React from 'react';
 import BaseNode from './BaseNode';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import {Handle} from "reactflow";
 
 const ConditionNode = ({ data, selected }) => {
     return (
@@ -22,6 +23,20 @@ const ConditionNode = ({ data, selected }) => {
                     <span className="text-xs font-bold text-red-600">FALSE</span>
                 </div>
             </div>
+            <Handle
+                type="source"
+                position={Position.Bottom}
+                id="onSuccess"
+                style={{ left: '33%' }}
+                className="!w-4 !h-4 !bg-green-500"
+            />
+            <Handle
+                type="source"
+                position={Position.Bottom}
+                id="onFailure"
+                style={{ left: '66%' }}
+                className="!w-4 !h-4 !bg-red-500"
+            />
         </BaseNode>
     );
 };
