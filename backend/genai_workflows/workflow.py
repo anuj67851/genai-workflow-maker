@@ -7,7 +7,7 @@ class WorkflowStep:
     """Represents a single, atomic step in a workflow."""
     step_id: str
     description: str
-    action_type: str  # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage', 'http_request', 'intelligent_router', 'direct_tool_call'
+    action_type: str  # 'agentic_tool_use', 'llm_response', 'condition_check', 'human_input', 'workflow_call', 'file_ingestion', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank', 'file_storage', 'http_request', 'intelligent_router', 'direct_tool_call', 'display_message'
     prompt_template: Optional[str] = None
     on_success: str = 'END'
     on_failure: Optional[str] = None

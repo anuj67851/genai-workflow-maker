@@ -35,6 +35,7 @@ code {
     .bg-node-database { @apply bg-sky-100; }
     .bg-node-direct-tool-call { @apply bg-yellow-100; }
     .bg-node-loop { @apply bg-rose-100; }
+    .bg-node-message { @apply bg-indigo-100; }
 
 
     /* Define border colors */
@@ -51,6 +52,7 @@ code {
     .border-node-database { @apply border-sky-300; }
     .border-node-direct-tool-call { @apply border-yellow-300; }
     .border-node-loop { @apply border-rose-300; }
+    .border-node-message { @apply border-indigo-300; }
 }
 
 

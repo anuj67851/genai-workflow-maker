@@ -32,9 +32,10 @@ import HttpRequestNode from '../components/nodes/HttpRequestNode';
 import IntelligentRouterNode from '../components/nodes/IntelligentRouterNode';
 import DatabaseQueryNode from '../components/nodes/DatabaseQueryNode';
 import DatabaseSaveNode from '../components/nodes/DatabaseSaveNode';
-import DirectToolCallNode from "../components/nodes/DirectToolCallNode.jsx";
-import StartLoopNode from "../components/nodes/StartLoopNode.jsx";
-import EndLoopNode from "../components/nodes/EndLoopNode.jsx";
+import DirectToolCallNode from "../components/nodes/DirectToolCallNode";
+import StartLoopNode from "../components/nodes/StartLoopNode";
+import EndLoopNode from "../components/nodes/EndLoopNode";
+import DisplayMessageNode from '../components/nodes/DisplayMessageNode';
 
 import useWorkflowStore from '../stores/workflowStore';
 
@@ -59,6 +60,7 @@ const nodeTypes = {
     direct_tool_callNode: DirectToolCallNode,
     start_loopNode: StartLoopNode,
     end_loopNode: EndLoopNode,
+    display_messageNode: DisplayMessageNode,
 };
 
 const initialNodes = [
@@ -92,6 +94,7 @@ const nodeDefaultsFactory = (type) => {
         'direct_tool_call': { target_tool_name: '', data_template: '{\n  "arg_name": "{input.variable}"\n}', output_key: 'direct_tool_output' },
         'start_loop': { input_collection_variable: '{input.my_list}', current_item_output_key: 'currentItem', output_key: 'loop_results' },
         'end_loop': { output_key: null, prompt_template: null }, // End loop has no config
+        'display_message': { prompt_template: 'The value is {input.variable_name}.' },
     };
 
     return { ...baseData, ...(specificData[type] || {}) };

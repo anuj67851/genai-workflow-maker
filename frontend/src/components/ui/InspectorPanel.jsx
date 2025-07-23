@@ -39,12 +39,13 @@ const nodeInspectorMap = {
 const NODES_WITH_PROMPT_TEMPLATE = [
     'agentic_tool_use', 'condition_check', 'human_input', 'llm_response',
     'file_ingestion', 'file_storage', 'vector_db_query', 'intelligent_router',
+    'display_message',
 ];
 const NODES_WITH_DATA_SOURCE = ['vector_db_ingestion', 'cross_encoder_rerank'];
 const NODES_WITH_OUTPUT_KEY = [
     'human_input', 'agentic_tool_use', 'llm_response', 'workflow_call', 'file_ingestion',
     'file_storage', 'http_request', 'vector_db_ingestion', 'vector_db_query', 'cross_encoder_rerank',
-    'database_query', 'database_save', 'direct_tool_call', 'start_loop',
+    'database_query', 'database_save', 'direct_tool_call', 'start_loop', 'display_message',
 ];
 
 const InspectorPanel = ({ selection, currentWorkflowId }) => {

@@ -25,6 +25,7 @@ from .actions.database_query_executor import DatabaseQueryAction
 from .actions.direct_tool_call_executor import DirectToolCallAction
 from .actions.start_loop_executor import StartLoopAction
 from .actions.end_loop_executor import EndLoopAction
+from .actions.display_message_executor import DisplayMessageAction
 
 if TYPE_CHECKING:
     from .core import WorkflowEngine
@@ -64,6 +65,7 @@ class WorkflowExecutor:
             "direct_tool_call": DirectToolCallAction,
             "start_loop": StartLoopAction,
             "end_loop": EndLoopAction,
+            "display_message": DisplayMessageAction,
         }
 
         self.action_executors = {

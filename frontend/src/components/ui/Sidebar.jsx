@@ -20,6 +20,7 @@ import {
     VariableIcon,
     ArrowPathIcon,
     ArrowUturnLeftIcon,
+    ChatBubbleBottomCenterTextIcon,
 } from '@heroicons/react/24/outline';
 import AccordionItem from './AccordionItem';
 import VariableExplorer from './VariableExplorer';
@@ -57,6 +58,7 @@ const Sidebar = () => {
         { type: 'intelligent_router', label: 'Intelligent Router', icon: <ShareIcon className="h-6 w-6 text-fuchsia-700" /> },
         { type: 'start_loop', label: 'Start Loop', icon: <ArrowPathIcon className="h-6 w-6 text-rose-700" /> },
         { type: 'end_loop', label: 'End Loop', icon: <ArrowUturnLeftIcon className="h-6 w-6 text-rose-700" /> },
+        { type: 'display_message', label: 'Display Message', icon: <ChatBubbleBottomCenterTextIcon className="h-6 w-6 text-indigo-700" /> },
     ];
 
     const handleSaveWorkflow = async () => {

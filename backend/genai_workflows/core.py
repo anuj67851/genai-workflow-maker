@@ -248,10 +248,14 @@ class WorkflowEngine:
             self.storage.delete_execution_state(execution_id)
             if status == "completed":
                 self.logger.info(f"Execution {execution_id} completed successfully.")
-                return {"status": "completed", "response": result["response"]}
+                return result
             else: # status == "failed"
                 self.logger.error(f"Execution {execution_id} failed: {result.get('error')}")
-                return {"status": "failed", "error": result.get("error", "An unknown error occurred.")}
+                return {
+                    "status": "failed",
+                    "error": result.get("error", "An unknown error occurred."),
+                    "state": result.get("state")
+                }
 
         except Exception as e:
             self.logger.error(f"Critical error in execution loop for workflow '{workflow.name}': {e}", exc_info=True)

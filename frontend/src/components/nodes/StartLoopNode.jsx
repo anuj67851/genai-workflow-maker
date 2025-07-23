@@ -1,7 +1,7 @@
 import React from 'react';
 import BaseNode from './BaseNode';
 import { Handle, Position } from 'reactflow';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import {ArrowPathIcon, ExclamationTriangleIcon} from '@heroicons/react/24/outline';
 
 const StartLoopNode = ({ data, selected }) => {
     return (
@@ -17,12 +17,32 @@ const StartLoopNode = ({ data, selected }) => {
                         {data.input_collection_variable || 'Not Set'}
                     </span>
                 </div>
-                <div className="text-xs text-gray-500 pt-1 border-t border-gray-200">
-                    <span className="font-semibold">Item Key:</span>
-                    <span className="font-mono bg-green-100 text-green-800 px-1 rounded ml-1">
-                        {data.current_item_output_key || 'Not Set'}
+                {data.current_item_output_key ? (
+                    <div className="text-xs text-gray-500 pt-1 border-t border-gray-200">
+                        <span className="font-semibold">Item Key:</span>
+                        <span className="font-mono bg-green-100 text-green-800 px-1 rounded ml-1">
+                        {data.current_item_output_key}
                     </span>
-                </div>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1 text-xs text-amber-600 pt-1 border-t border-gray-200">
+                        <ExclamationTriangleIcon className="h-4 w-4" />
+                        <span>Item key not set.</span>
+                    </div>
+                )}
+                {data.output_key ? (
+                    <div className="text-xs text-gray-500 pt-1 border-t border-gray-200">
+                        <span className="font-semibold">Aggregated Results To:</span>
+                        <span className="font-mono bg-green-100 text-green-800 px-1 rounded ml-1">
+                            {data.output_key}
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1 text-xs text-amber-600 pt-1 border-t border-gray-200">
+                        <ExclamationTriangleIcon className="h-4 w-4" />
+                        <span>Aggregated output key not set.</span>
+                    </div>
+                )}
                 <div className="flex justify-between mt-2 px-1 text-xs font-bold text-center">
                     <span className="text-rose-600">Loop Body</span>
                     <span className="text-gray-600">On Complete</span>

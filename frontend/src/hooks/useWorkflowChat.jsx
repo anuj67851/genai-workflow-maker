@@ -37,21 +37,42 @@ export const useWorkflowChat = (selectedWorkflow) => {
     }, [selectedWorkflow]);
 
     const processApiResponse = (data) => {
+        // Create a buffer for all new messages to be added in this turn.
+        const newMessages = [];
+
+        // 1. Check for and add any 'display_message' outputs from the history.
+        // This only runs on a completed or failed workflow that returns the full state.
+        if (data.state?.step_history) {
+            const displayMessages = data.state.step_history
+                .filter(step => step.type === 'display_message' && step.output)
+                .map(step => ({ role: 'assistant', content: `${step.output}` })); // Render message in italics
+
+            if(displayMessages.length > 0) {
+                newMessages.push(...displayMessages);
+            }
+        }
+
+        // 2. Add the main response or error message.
         let responseText = data.response || data.error || "An unknown error occurred.";
         if (typeof responseText === 'object') {
-            // Pretty-print the JSON object for better readability in the chat
             responseText = "```json\n" + JSON.stringify(responseText, null, 2) + "\n```";
         }
-        setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
+        newMessages.push({ role: 'assistant', content: responseText });
 
-        if (data.status === 'awaiting_input') {
+        // 3. Update the state with all new messages at once.
+        setMessages(prev => [...prev, ...newMessages]);
+
+
+        // This part remains the same: handle the pause/resume state.
+        if (data.status === 'awaiting_input' || data.status === 'awaiting_file_upload') {
             setExecutionState({
                 id: data.execution_id,
-                pauseType: data.pause_type === 'awaiting_file_upload' ? 'file_upload' : 'text_input',
+                pauseType: data.status === 'awaiting_file_upload' ? 'file_upload' : 'text_input',
                 allowedFileTypes: data.allowed_file_types || [],
                 maxFiles: data.max_files || 1,
             });
         } else {
+            // Workflow is completed or failed, so reset.
             setExecutionState({ id: null, pauseType: 'text_input', allowedFileTypes: [], maxFiles: 1 });
         }
     };
