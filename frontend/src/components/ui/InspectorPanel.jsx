@@ -17,6 +17,7 @@ import { DatabaseQueryNodeInspector } from '../nodes/DatabaseQueryNode';
 import { DatabaseSaveNodeInspector } from '../nodes/DatabaseSaveNode';
 import { DirectToolCallNodeInspector } from "../nodes/DirectToolCallNode";
 import { StartLoopNodeInspector } from '../nodes/StartLoopNode';
+import { EndLoopNodeInspector } from '../nodes/EndLoopNode';
 
 // Map node types to their specific inspector components
 const nodeInspectorMap = {
@@ -33,6 +34,7 @@ const nodeInspectorMap = {
     database_save: DatabaseSaveNodeInspector,
     direct_tool_call: DirectToolCallNodeInspector,
     start_loop: StartLoopNodeInspector,
+    end_loop: EndLoopNodeInspector,
 };
 
 // --- Helper constants for conditional rendering ---

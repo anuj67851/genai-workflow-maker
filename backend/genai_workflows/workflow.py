@@ -64,6 +64,9 @@ class WorkflowStep:
     current_item_output_key: Optional[str] = None
     loop_body_start_step_id: Optional[str] = None # This will be populated by from_graph
 
+    # --- Field for 'end_loop' ---
+    value_to_return: Optional[str] = None
+
     def to_dict(self) -> Dict[str, Any]:
         # Exclude fields with default or None values for cleaner serialization, if desired.
         # For now, a simple conversion is robust.

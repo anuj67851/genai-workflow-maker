@@ -93,7 +93,7 @@ const nodeDefaultsFactory = (type) => {
         'database_query': { query_template: "SELECT * FROM my_table WHERE id = '{input.some_id}';", output_key: 'db_results' },
         'direct_tool_call': { target_tool_name: '', data_template: '{\n  "arg_name": "{input.variable}"\n}', output_key: 'direct_tool_output' },
         'start_loop': { input_collection_variable: '{input.my_list}', current_item_output_key: 'currentItem', output_key: 'loop_results' },
-        'end_loop': { output_key: null, prompt_template: null }, // End loop has no config
+        'end_loop': { output_key: null, prompt_template: null, value_to_return: null },
         'display_message': { prompt_template: 'The value is {input.variable_name}.' },
     };
 
