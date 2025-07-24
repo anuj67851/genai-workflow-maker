@@ -1,7 +1,7 @@
 import React from 'react';
 import BaseNode from './BaseNode';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
-import {Handle} from "reactflow";
+import {Handle, Position} from "reactflow";
 
 const ConditionNode = ({ data, selected }) => {
     return (
