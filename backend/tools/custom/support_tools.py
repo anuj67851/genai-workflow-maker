@@ -142,3 +142,11 @@ def check_system_outages() -> str:
         summary = "All systems are fully operational.\n"
 
     return summary + "\n".join(report)
+
+@tool
+def generate_random_number() -> int:
+    """
+    Generates a random 5-digit number.
+    :return: A random 5-digit integer.
+    """
+    return random.randint(10000, 99999)

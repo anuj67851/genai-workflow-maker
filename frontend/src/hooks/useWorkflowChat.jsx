@@ -44,7 +44,7 @@ export const useWorkflowChat = (selectedWorkflow) => {
         // This only runs on a completed or failed workflow that returns the full state.
         if (data.state?.step_history) {
             const displayMessages = data.state.step_history
-                .filter(step => step.type === 'display_message' && step.output)
+                .filter(step => (step.type === 'display_message' || step.type === 'llm_response') && step.output)
                 .map(step => ({ role: 'assistant', content: `${step.output}` })); // Render message in italics
 
             if(displayMessages.length > 0) {
@@ -64,10 +64,10 @@ export const useWorkflowChat = (selectedWorkflow) => {
 
 
         // This part remains the same: handle the pause/resume state.
-        if (data.status === 'awaiting_input' || data.status === 'awaiting_file_upload') {
+        if (data.status === 'awaiting_input') {
             setExecutionState({
                 id: data.execution_id,
-                pauseType: data.status === 'awaiting_file_upload' ? 'file_upload' : 'text_input',
+                pauseType: data.pause_type === 'awaiting_file_upload' ? 'file_upload' : 'text_input',
                 allowedFileTypes: data.allowed_file_types || [],
                 maxFiles: data.max_files || 1,
             });
