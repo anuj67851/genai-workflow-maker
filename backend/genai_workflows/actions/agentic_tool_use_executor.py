@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 class AgenticToolUseAction(BaseActionExecutor):
     async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
-        filled_prompt = self._fill_prompt_template(step.prompt_template, state)
+        llm_input = self._prepare_llm_input(step, state)
+        final_prompt = llm_input["final_prompt"]
+
         system_message = "You are an assistant that must achieve a goal. Analyze the user's query and the goal."
         available_tools: List[Dict[str, Any]] = []
 
@@ -23,7 +25,7 @@ class AgenticToolUseAction(BaseActionExecutor):
         elif step.tool_selection == 'none':
             system_message += " You must respond directly without using any tools."
 
-        messages = [{"role": "system", "content": system_message}, {"role": "user", "content": filled_prompt}]
+        messages = [{"role": "system", "content": system_message}, {"role": "user", "content": final_prompt}]
         model = step.model_name or settings.DEFAULT_MODEL
         completion_kwargs = {"model": model, "messages": messages}
         if available_tools:

@@ -123,3 +123,76 @@ class BaseActionExecutor(ABC):
         # If we are here, the template is a string with embedded placeholders.
         # We use re.sub to replace all occurrences.
         return re.sub(placeholder_regex, replace_match, template)
+
+    def _fill_prompt_template_with_tracking(self, template: str, state: Dict[str, Any]) -> tuple[str, bool]:
+        """
+        Replaces all placeholders in a template string and tracks if any
+        substitutions were actually made.
+
+        Returns:
+            A tuple containing:
+            - The filled template string.
+            - A boolean that is True if at least one placeholder was replaced.
+        """
+        if not template:
+            return "", False
+
+        substitutions_made = [False] # Use a list to allow modification in nested scope
+        placeholder_regex = r'\{(?:state|context|input|env)\.[a-zA-Z0-9_]+_?\}|\{query\}'
+
+        def replace_match(match):
+            placeholder = match.group(0)
+            value = self._get_value_from_state(placeholder, state)
+
+            if value is not None:
+                substitutions_made[0] = True
+                if not isinstance(value, str):
+                    return json.dumps(value, default=str)
+                return value
+
+            return placeholder
+
+        if re.fullmatch(placeholder_regex, template.strip()):
+            value = self._get_value_from_state(template, state)
+            if value is not None:
+                return str(value), True
+            else:
+                return template, False
+
+        filled_template = re.sub(placeholder_regex, replace_match, template)
+
+        if filled_template == template and not substitutions_made[0]:
+            return filled_template, False
+
+        return filled_template, True
+
+    def _get_relevant_history(self, state: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Prunes the step history to include only the most recent items
+        to serve as general context.
+        """
+        history = state.get("step_history", [])
+        relevant_items = [{"step_id": "start", "type": "query", "output": state.get("query")}]
+        relevant_items.extend(history[-3:]) # Get last 3 items
+        return relevant_items
+
+
+    def _prepare_llm_input(self, step: 'WorkflowStep', state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Prepares the final input for an LLM call, implementing the
+        "Conditional Context" logic.
+        """
+        prompt_template = step.prompt_template or ""
+        filled_prompt, variables_were_used = self._fill_prompt_template_with_tracking(prompt_template, state)
+
+        if variables_were_used:
+            return {"final_prompt": filled_prompt}
+        else:
+            context_history = self._get_relevant_history(state)
+            contextual_prompt = f"""Based on the following context, complete the request.
+---
+CONTEXT:
+{json.dumps(context_history, indent=2, default=str)}
+---
+REQUEST: {prompt_template}"""
+            return {"final_prompt": contextual_prompt}

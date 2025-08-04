@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class ConditionCheckAction(BaseActionExecutor):
     async def execute(self, step: WorkflowStep, state: Dict[str, Any]) -> Dict[str, Any]:
-        filled_prompt = self._fill_prompt_template(step.prompt_template, state)
+        llm_input = self._prepare_llm_input(step, state)
         prompt = f"""
         Analyze the following execution history and context to determine if a specific condition is met.
         **Execution History & Context:**
@@ -19,7 +19,7 @@ class ConditionCheckAction(BaseActionExecutor):
         {json.dumps(state, indent=2, default=str)}
         ---
         **Condition to Evaluate:**
-        "{filled_prompt}"
+        "{llm_input["final_prompt"]}"
         **Your Task:**
         1. Carefully read the history and context.
         2. Evaluate the condition based on the provided information.

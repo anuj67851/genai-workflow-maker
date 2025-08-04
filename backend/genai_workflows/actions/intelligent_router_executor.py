@@ -20,7 +20,8 @@ class IntelligentRouterAction(BaseActionExecutor):
         if not step.prompt_template:
             return {"step_id": step.step_id, "success": False, "error": "Intelligent Router node is missing its prompt/instruction."}
 
-        filled_prompt = self._fill_prompt_template(step.prompt_template, state)
+        llm_input = self._prepare_llm_input(step, state)
+        final_prompt = llm_input["final_prompt"]
         available_choices = list(step.routes.keys())
 
         system_prompt = f"""
@@ -32,15 +33,10 @@ Available Options:
 """
 
         user_prompt = f"""
-**Instruction:**
-{filled_prompt}
-
-**Workflow Context:**
+Based on the following information, which of the available options is the most appropriate next step?
 ---
-{json.dumps(state, indent=2, default=str)}
+{final_prompt}
 ---
-
-Based on the instruction and the context, which of the available options is the most appropriate next step?
 Respond with ONLY the name of your chosen option from the list.
 """
 
